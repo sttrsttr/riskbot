@@ -1,15 +1,24 @@
 How to set up riskbot on your own host:
 
-Have NPM installed
-
-Set up CRON-JOB to restart bot every 24 hours, add this line to your user crontab: (if you dont run on a linux server, there may be other tools than cron to handle this)
-	
-	1 15 * * * sh reboot_riskbot.sh
+Have NPM installed:
 
 Install required node modules
 
 	npm install
 
+To make the bot run continuisuly use one of two strategies:
+
+A) Set up CRON-JOB to restart bot every 24 hours, add this line to your user crontab: (if you dont run on a linux server, there may be other tools than cron to handle this)
+	
+	1 15 * * * sh reboot_riskbot.sh
+
+B) or Set up pm2
+
+    npm install -g pm2
+    pm2 start riskbot.js --name riskbot
+    pm2 startup
+    pm2 save
+    
 Create an riskbot_config.json file with the following content:
 (remember to add your own token and clientId, and adjust for wha servers the bot should be interacting with)
 (sabr commands needs mysql access to Friendofrisk.com database, so you will not be able to run those)
