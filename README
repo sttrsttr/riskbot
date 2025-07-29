@@ -1,0 +1,38 @@
+How to set up riskbot on your own host:
+
+Have NPM installed
+
+Set up CRON-JOB to restart bot every 24 hours, add this line to your user crontab: (if you dont run on a linux server, there may be other tools than cron to handle this)
+	
+	1 15 * * * sh reboot_riskbot.sh
+
+Install required node modules
+
+	npm install
+
+Create an riskbot_config.json file with the following content:
+(remember to add your own token and clientId, and adjust for wha servers the bot should be interacting with)
+(sabr commands needs mysql access to Friendofrisk.com database, so you will not be able to run those)
+(edit deply-commands.js accordingly to your server and command needs)
+
+{
+"token": "",
+"clientId": "",
+"guilds": {
+    "GMARENA": "776142718425497640",
+    "RISKDEV": "796769248444809266",
+    "MAIN": "465846009164070912",
+    "DEADMANWALKING": "1091918521463742484",
+    "2V2": "716784438058418197",
+    "RETRYGAMES": "681626969670156320",
+    "ELITAR": "1047558517495705713",
+    "RISKINGHILL": "945979390666354698"
+},
+"channel_main1v1": "1120647324100743198",
+"mysql_username": "riskbot",
+"mysql_password": "",
+"mysql_host": "localhost",
+"mysql_database": "",
+"wix_api_key": "",
+"wix_site_id": ""
+}

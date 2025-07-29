@@ -1,0 +1,156 @@
+// This command let users report a 1v1 match and store it to a database for future verification
+// It also looks at any previous reports and check if enough players have verified the results
+
+// Optional parameter to be added during testing
+//				.addStringOption(option =>
+//					option.setName('ignore_rules')
+//						.setDescription('Ignore all the rules?')
+//						.setRequired(false)
+//						.addChoices(
+//							{ name: 'Yes', value: '1' },
+//							{ name: 'No', value: '0' })
+// )
+
+
+// Load required modules and config
+const { SlashCommandBuilder } = require('discord.js');
+const { channel_main1v1, mysql_host, mysql_username, mysql_password, mysql_database } = require('../riskbot_config.json');
+var mysql = require('mysql2');
+const utf8 = require('utf8');
+
+// Register command
+module.exports = {
+	data: new SlashCommandBuilder()
+		.setName('ffa-result')
+		.setDescription('Report result from a FFA casual league game')
+				.addStringOption(option =>
+					option.setName('gamemode')
+						.setDescription('Game mode')
+						.setRequired(true)
+					)
+					.addChoices(
+							{ name: 'World Dom', value: 'WD' },
+							{ name: '70%', value: '70' },
+							{ name: 'Speed Blitz', value: 'SPEED' },
+							{ name: 'Capitals', value: 'CAPS' },
+							{ name: 'Zombies', value: 'ZOMBIE' }
+					)
+				.addUserOption(option =>
+					option
+					.setName('winner')
+					.setDescription('Winner of the game')
+					.setRequired(true)
+				)
+				.addUserOption(option =>
+					option.setName('player2')
+						.setDescription('Player2')
+						.setRequired(true)
+					)
+				.addUserOption(option =>
+					option.setName('player3')
+						.setDescription('Player3')
+						.setRequired(true)
+					)
+				.addUserOption(option =>
+					option.setName('player4')
+						.setDescription('Player4')
+						.setRequired(false)
+					)
+				.addUserOption(option =>
+					option.setName('player5')
+						.setDescription('Player5')
+						.setRequired(false)
+					)
+				.addUserOption(option =>
+					option.setName('player6')
+						.setDescription('Player6')
+						.setRequired(false)
+					)
+							
+		,
+		async execute(interaction) {
+			const interactionUser = await interaction.guild.members.fetch(interaction.user.id);
+
+			// Connect to SQL database
+			var con = mysql.createConnection({
+				host: mysql_host,
+				user: mysql_username,
+				password: mysql_password,
+				supportBigNumbers: true,
+				bigNumberStrings: true
+			});
+			
+			con.connect(function(err) {
+				if (err) throw err;
+				console.log("Connected to MySQL server!");
+			});
+
+			var is_error = 0;
+			var errors = "Game report added.";
+
+			// Get user input
+			const user1 = interaction.options.getUser('winner');
+			const user2 = interaction.options.getUser('player2');
+			const user3 = interaction.options.getUser('player3');
+			const user4 = interaction.options.getUser('player4');
+			const user5 = interaction.options.getUser('player5');
+			const user6 = interaction.options.getUser('player6');
+			const gamemode = interaction.options.getString('player1_points');
+
+			let users = [user1.id, user2.id, user3.id];
+			if (user4) {
+				users.push(user4.id);
+			}
+			if (user5) {
+				users.push(user5.id);
+			}
+			if (user6) {
+				users.push(user6.id);
+			}
+
+			const promises = userids.map((userID) => {
+					return new Promise(async (resolve) => {
+						const member = await interaction.guild.members.fetch(userID);
+						resolve(member.displayName || member.user.username);
+					});
+			});
+
+			const nicknames = await Promise.all(promises);
+			let dupecheck = [];
+			let dupefound = [];
+
+			for (i = 0; i < users.length; i++) {
+				if (dupecheck.includes(users[i])) {
+					dupefound.push(users[i]);
+				}
+				dupecheck.push(users[i]);
+				var sql = "REPLACE INTO `"+ mysql_database +"`.`rcl__discord_users` VALUES ("+ users[i] +",'"+ utf8.encode(nicknames[i].replace("'", "").substring(0,49)) +"')";
+				con.query(sql, function (err, result) {
+					if (err) throw err;
+				});	
+			}
+
+			if (dupefound.length > 0) {
+				errors = "Some of the players you have reported in this match is the same player. Please try again to report the results.";
+				is_error = 1;
+			} else {
+				// All good so far
+
+				var text = '\n\n+-------------------------+\n| 1v1 match report             \n+-------------------------+\n| '+ user1.toString() +': **'+ player1_score +'** points \n| '+ user2.toString() +': **'+ player2_score +'** points \n+-------------------------+\nBoth players need to react to this message with ✅ to verify the result. If the results are not verified by 48 hours the match is no longer valid.\n\nVisit https://www.friendsofrisk.com/1v1 to see your standings\n\n';
+				let message = await interaction.client.channels.cache.get(channel_mainffa).send(text);
+				message.react("✅");
+				var sql = "INSERT INTO `"+ mysql_database +"`.`ffa__reports` VALUES ("+ message.id +",NOW(),"+ interactionUser +","+ user1id +",'"+ player1_score +"',"+ user2id +",'"+ player2_score +"',NULL,NULL,NULL)";
+				con.query(sql, function (err, result) {
+					if (err) throw err;
+				});
+			}
+
+  			con.end();
+
+			if (is_error == 0) {
+				await interaction.reply({ content: errors, ephemeral: false });
+			} else {
+				await interaction.reply({ content: errors, ephemeral: false });
+			}
+		}
+};
