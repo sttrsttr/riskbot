@@ -22,7 +22,7 @@ module.exports = {
 	async execute(interaction) {
 	  try {
 
-//		await interaction.reply({ content: "Give me a second please...\n"+ dmtargets, ephemeral: true });
+//		await interaction.reply({ content: "Give me a second please...\n"+ dmtargets, flags: 64 });
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
@@ -63,7 +63,7 @@ module.exports = {
 		let replymessage = "";
 
 
-		await interaction.reply({ content: "I am on it...  I will check if they have some available team times set up in Friends of Risk", ephemeral: true });
+		await interaction.reply({ content: "I am on it...  I will check if they have some available team times set up in Friends of Risk", flags: 64 });
 
 		let sql = "SELECT * FROM `"+ global.config.mysql_database +"`.`users` WHERE `discordid` = '"+ user.id +"' LIMIT 1";
 				const result = await new Promise((resolve, reject) => {
@@ -167,17 +167,17 @@ module.exports = {
 	
 		try {
 
-			await interaction.followUp({ content: replymessage, ephemeral: true });				
+			await interaction.followUp({ content: replymessage, flags: 64 });				
 
 		} catch (error) {
 			console.error(error);
-			await interaction.followUp({ content: "Error, I might not have the correct permissions to send messages to this channel.", ephemeral: true });				
+			await interaction.followUp({ content: "Error, I might not have the correct permissions to send messages to this channel.", flags: 64 });				
 		}
 
 
 	  } catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error, please try again later", flags: 64 });
 	  }
 	}
   };

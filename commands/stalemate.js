@@ -168,7 +168,7 @@ module.exports = {
 
 			let errorcnt = 0;
 
-			await interaction.reply({ content: "I am on it... I will send the players the alternative win condition in DM:\n"+ dmtargets, ephemeral: true });
+			await interaction.reply({ content: "I am on it... I will send the players the alternative win condition in DM:\n"+ dmtargets, flags: 64 });
 
 
 			if (wincondition == "assassins") {
@@ -255,6 +255,6 @@ module.exports = {
 			errors = errors + '\n\nAlternative win condition: '+ wincondition;
 
 
-			await interaction.followUp({ content: errors, ephemeral: true });
+			await interaction.followUp({ content: errors, flags: 64 });
 		}
 };

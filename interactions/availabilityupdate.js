@@ -43,12 +43,12 @@ module.exports = async (interaction) => {
 						resolve(result);
 					});
 				});
-				await interaction.reply({ content: 'Click this link to update your availability: <https://friendsofrisk.com/register/availability/login/' + rows[0].id + '/' + guid + '>', ephemeral: true, allowedMentions: { parse: [] } });
+				await interaction.reply({ content: 'Click this link to update your availability: <https://friendsofrisk.com/register/availability/login/' + rows[0].id + '/' + guid + '>', flags: 64, allowedMentions: { parse: [] } });
 			}
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+			await interaction.reply({ content: "Error, please try again later", flags: 64 });
 		}
 
 };

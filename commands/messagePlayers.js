@@ -20,7 +20,7 @@ module.exports = {
             const eventData = eventStorage[channelId];
 
             if (!eventData || !eventData.playerThreads) {
-                await interaction.reply({ content: 'No player threads found for this event.', ephemeral: true });
+                await interaction.reply({ content: 'No player threads found for this event.', flags: 64 });
                 return;
             }
 
@@ -34,10 +34,10 @@ module.exports = {
                 }
             }
 
-            await interaction.reply({ content: 'Message sent to all player threads.', ephemeral: true });
+            await interaction.reply({ content: 'Message sent to all player threads.', flags: 64 });
         } catch (error) {
             console.error('Error sending message to player threads:', error);
-            await interaction.reply({ content: 'An error occurred while sending the message.', ephemeral: true });
+            await interaction.reply({ content: 'An error occurred while sending the message.', flags: 64 });
         }
     }
 };

@@ -61,7 +61,7 @@ module.exports = {
 				const action = interaction.options.getString('action');
 				const user = interaction.options.getMember('user');
 				let score = parseInt(points[action]);
-				await interaction.reply({ content: "Adding karma points to database now!", ephemeral: true });
+				await interaction.reply({ content: "Adding karma points to database now!", flags: 64 });
 				const comment = interaction.options.getString('comment').replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 500);
 				const guild = await client.guilds.resolve(interaction.guild.id);
 
@@ -117,9 +117,9 @@ module.exports = {
 			} catch (error) {
 				console.error(error);
 				if (interaction.replied || interaction.deferred) {
-					await interaction.followUp({ content: "Error, please try again later", ephemeral: true });
+					await interaction.followUp({ content: "Error, please try again later", flags: 64 });
 				} else {
-					await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+					await interaction.reply({ content: "Error, please try again later", flags: 64 });
 				}
 			}
 		

@@ -10,11 +10,11 @@ module.exports = {
 
 		const attachment = new AttachmentBuilder('https://friendsofrisk.com/randomsettings1v1.png'); //ex. https://i.imgur.com/random.jpg
 		//message.channel.send({ content: "I sent you a photo!", files: [attachment] })
-		await interaction.reply({ content: "Here are some random 1v1 settings for you", files: [attachment], ephemeral: false });
+		await interaction.reply({ content: "Here are some random 1v1 settings for you", files: [attachment], flags: 0 });
 
 	  } catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error, please try again later", flags: 64 });
 	  }
 	}
   };

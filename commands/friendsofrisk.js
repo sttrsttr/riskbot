@@ -8,11 +8,11 @@ module.exports = {
 	async execute(interaction) {
 	  try {
 
-		await interaction.reply({ content: "This command is outdated. Just visit https://www.friendsofrisk.com and you can login directly from Discord there\n"+ dmtargets, ephemeral: true });
+		await interaction.reply({ content: "This command is outdated. Just visit https://www.friendsofrisk.com and you can login directly from Discord there\n"+ dmtargets, flags: 64 });
 
 	  } catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error getting status, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error getting status, please try again later", flags: 64 });
 	  }
 	}
   };

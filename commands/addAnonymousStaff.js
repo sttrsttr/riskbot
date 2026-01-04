@@ -19,14 +19,14 @@ module.exports = {
             const { getStaffThread } = require('../modules/eventStorage');
             const staffThreadId = getStaffThread(interaction.channelId);
             if (!staffThreadId) {
-                await interaction.reply({ content: 'Staff thread not found for this event channel.', ephemeral: true });
+                await interaction.reply({ content: 'Staff thread not found for this event channel.', flags: 64 });
                 return;
             }
             await addUserToStaffThread(client, guild.id, staffThreadId, user.id);
-            await interaction.reply({ content: `Added <@${user.id}> to the staff thread.`, ephemeral: true });
+            await interaction.reply({ content: `Added <@${user.id}> to the staff thread.`, flags: 64 });
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: 'Error adding user to staff thread.', ephemeral: true });
+            await interaction.reply({ content: 'Error adding user to staff thread.', flags: 64 });
         }
     }
 };

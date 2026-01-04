@@ -7,7 +7,7 @@ module.exports = async (interaction) => {
 	const messageid = interaction.message.id;
 
     try {
-        await interaction.reply({ content: "Please stand by...", ephemeral: true });
+        await interaction.reply({ content: "Please stand by...", flags: 64 });
 
         // Connect to SQL database
         var con = mysql.createConnection({
@@ -39,7 +39,7 @@ module.exports = async (interaction) => {
         con.end();
     } catch (error) {
         console.error(error);
-        await interaction.followUp({ content: "Error, please try again later", ephemeral: true });
+        await interaction.followUp({ content: "Error, please try again later", flags: 64 });
     }
 
 };

@@ -75,6 +75,8 @@ const client = new Client({
 	partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
+global.client = client;
+
 // Load commands
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
@@ -89,7 +91,6 @@ fs.readdirSync(buttonsPath).forEach(file => {
   buttonHandlers.set(customId, handler);
 });
 
-global.client = client;
 
 // Load commands
 for (const file of commandFiles) {
@@ -103,7 +104,7 @@ client.once(Events.ClientReady, () => {
 	//	undeployCommands(client, '716784438058418197');
 	refreshtournamentcalendar();
 	if (global.config.guilds.RISKDEV !== undefined) {
-		message_channel(global.config.guilds.RISKDEV, '1292848598337323109', "I just got restarted, feeling great!");
+		message_channel(client, global.config.guilds.RISKDEV, '1292848598337323109', "I just got restarted, feeling great!");
 	}
 
 	eventmanager1hourping(client);
@@ -185,28 +186,41 @@ client.on('guildMemberAdd', async (member) => {
 
 // Listen for any commands
 client.on(Events.InteractionCreate, async interaction => {
-	if (!interaction.isChatInputCommand()) return;
-	const command = client.commands.get(interaction.commandName);
-	if (!command) return;
-	try {
-		await logcommand(interaction);
-		await command.execute(interaction, client);
-
-		if (interaction.commandName === 'eventlabs-create' || interaction.commandName === 'create-event') {
-			// Refresh list of channels after new tournaments are added
-			allowedChannelIds = getAllowedChannelIds();
-			chatChannelIds = getChatChannelIds();
-			announcementChannelsIds = getAnnouncementChannelsIds();
-		}
-
-	} catch (error) {
-		if (interaction.replied || interaction.deferred) {
-			await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+	if (interaction.isButton()) {
+		console.log(interaction.customId);
+		const handler = buttonHandlers.get(interaction.customId);
+		if (handler) {
+			await handler(interaction);
 		} else {
-			await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+			// handle unknown button
+		}
+	} else {
+		if (!interaction.isChatInputCommand()) return;
+		const command = client.commands.get(interaction.commandName);
+		if (!command) return;
+		try {
+			await logcommand(interaction);
+			await command.execute(interaction, client);
+
+			if (interaction.commandName === 'eventlabs-create' || interaction.commandName === 'create-event') {
+				// Refresh list of channels after new tournaments are added
+				allowedChannelIds = getAllowedChannelIds();
+				chatChannelIds = getChatChannelIds();
+				announcementChannelsIds = getAnnouncementChannelsIds();
+			}
+
+		} catch (error) {
+			if (interaction.replied || interaction.deferred) {
+				await interaction.followUp({ content: 'There was an error while executing this command!', flags: 64 });
+			} else {
+				await interaction.reply({ content: 'There was an error while executing this command!', flags: 64 });
+			}
 		}
 	}
 });
+
+
+
 
 // Listen for event signup messages
 client.on('messageCreate', async (message) => {
@@ -296,17 +310,6 @@ client.on('messageCreate', async (message) => {
 	}
 });
 
-/* Handle button interactions */
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isButton()) return;
-  const handler = buttonHandlers.get(interaction.customId);
-  if (handler) {
-    await handler(interaction);
-  } else {
-    // handle unknown button
-  }
-});
-
 
 // Function to log any command run
 async function logcommand(interaction) {
@@ -387,7 +390,7 @@ app.post('/api/countmemes', async (req, res) => {
 app.post('/api/emptyrole', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await emptyRole(post.serverid, post.roleid);;
+		let output = await emptyRole(client, post.serverid, post.roleid);;
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -400,7 +403,7 @@ app.post('/api/emptyrole', async (req, res) => {
 app.post('/api/fetchrole', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await fetchRole(post.serverid, post.roleid);;
+		let output = await fetchRole(client, post.serverid, post.roleid);;
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -413,7 +416,7 @@ app.post('/api/fetchrole', async (req, res) => {
 app.post('/api/deleterole', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await deleteRole(post.serverid, post.roleid);;
+		let output = await deleteRole(client, post.serverid, post.roleid);;
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -426,7 +429,7 @@ app.post('/api/deleterole', async (req, res) => {
 app.post('/api/createrole', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await createRole(post.serverid, post.rolename);;
+		let output = await createRole(client, post.serverid, post.rolename);;
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -439,7 +442,7 @@ app.post('/api/createrole', async (req, res) => {
 app.post('/api/deletechannel', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await deleteChannel(post.serverid, post.channelid);;
+		let output = await deleteChannel(client, post.serverid, post.channelid);;
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -452,7 +455,7 @@ app.post('/api/deletechannel', async (req, res) => {
 app.post('/api/deletethread', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await deleteThread(post.serverid, post.channelid, post.threadid);;
+		let output = await deleteThread(client, post.serverid, post.channelid, post.threadid);;
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -478,7 +481,7 @@ app.post('/api/lockthread', async (req, res) => {
 app.post('/api/message', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await message_channel(post.server, post.channel, post.message);
+		let output = await message_channel(client, post.server, post.channel, post.message);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -510,7 +513,7 @@ app.post('/api/addrole', async (req, res) => {
 			if (role) {
 				await member.roles.add(role);
 
-				if (guild.id === guild.MAIN) {
+				if (guild.id === global.config.guilds.MAIN) {
 					// Remove the role from the new member
 					if (member.roles.cache.has(main_no_role)) {
 						await member.roles.remove(main_no_role).catch(console.error);
@@ -568,7 +571,7 @@ app.post('/api/createthread', async (req, res) => {
 	try {
 		//console.log(req.body);
 		let post = req.body;
-		let output = await create_thread(post.server, post.channel, post.threadname, post.users, post.staffrole, post.message);
+		let output = await create_thread(client, post.server, post.channel, post.threadname, post.users, post.staffrole, post.message);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -582,7 +585,7 @@ app.post('/api/createthread', async (req, res) => {
 app.post('/api/messagethread', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await message_thread(post.server, post.channel, post.thread, post.message, post.users);
+		let output = await message_thread(client, post.server, post.channel, post.thread, post.message, post.users);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -598,7 +601,7 @@ app.post('/api/addtothread', async (req, res) => {
 	try {
 		//console.log(req.body);
 		let post = req.body;
-		let output = await add_to_thread(post.serverid, post.channelid, post.threadid, post.userid);
+		let output = await add_to_thread(client, post.serverid, post.channelid, post.threadid, post.userid);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -614,7 +617,7 @@ app.post('/api/removefromthread', async (req, res) => {
 	try {
 		//console.log(req.body);
 		let post = req.body;
-		let output = await removefromthread(post.serverid, post.channelid, post.threadid, post.userid);
+		let output = await removefromthread(client, post.serverid, post.channelid, post.threadid, post.userid);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -630,7 +633,7 @@ app.post('/api/swapusers', async (req, res) => {
 	try {
 		//console.log(req.body);
 		let post = req.body;
-		let output = await swap_users(client, post.server, post.channel, post.thread_a, post.user_a, post.thread_b, post.user_b, post.message, post.staffroleid);
+		let output = await swap_users(client, client, post.server, post.channel, post.thread_a, post.user_a, post.thread_b, post.user_b, post.message, post.staffroleid);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {

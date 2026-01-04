@@ -25,7 +25,7 @@ module.exports = {
 
         try {
 
-            await interaction.reply({ content: "I am on it...", ephemeral: true });
+            await interaction.reply({ content: "I am on it...", flags: 64 });
 
             const parentChannel = interaction.guild?.channels.cache.get(interaction.channel?.parentId);
             const channelId = (parentChannel && parentChannel.type === 4)
@@ -76,7 +76,7 @@ module.exports = {
                         groups = await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
                         if (groups.length != 1) {
-                            await interaction.followUp({ content: "ERROR: I could not find both players groups, please use the website to swap manually", ephemeral: true });
+                            await interaction.followUp({ content: "ERROR: I could not find both players groups, please use the website to swap manually", flags: 64 });
                         } else {
 
                             const swap = groups[0];
@@ -107,14 +107,14 @@ module.exports = {
 
 
                     } else {
-                        await interaction.followUp({ content: "ERROR: You are not staff in this event, so you are not allowed to swap players", ephemeral: true });
+                        await interaction.followUp({ content: "ERROR: You are not staff in this event, so you are not allowed to swap players", flags: 64 });
                     }
 
 
                 }
 
             } else {
-                await interaction.followUp({ content: "ERROR: I could not find any events active in this channel", ephemeral: true });
+                await interaction.followUp({ content: "ERROR: I could not find any events active in this channel", flags: 64 });
             }
         } catch (err) {
             console.log(err)

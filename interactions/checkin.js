@@ -1,3 +1,5 @@
+const { updatecheckinmessage } = require('../modules/signuphandler.js');
+
 var mysql = require('mysql2');
 
 module.exports = async (interaction) => {
@@ -41,16 +43,16 @@ module.exports = async (interaction) => {
 					});
 				});
 
-				await interaction.reply({ content: "You are now checked in ✅", ephemeral: true });
+				await interaction.reply({ content: "You are now checked in ✅", flags: 64 });
 				await updatecheckinmessage(thread);
 
 			} else {
-				await interaction.reply({ content: "I am not able to check you in, sorry!", ephemeral: true });
+				await interaction.reply({ content: "I am not able to check you in, sorry!", flags: 64 });
 			}
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+			await interaction.reply({ content: "Error, please try again later", flags: 64 });
 		}
 
 };

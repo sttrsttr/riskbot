@@ -135,7 +135,7 @@ module.exports = {
 
 			let errorcnt = 0;
 
-			await interaction.reply({ content: "I am on it... I will send the players their targets in DM:\n"+ dmtargets, ephemeral: true });
+			await interaction.reply({ content: "I am on it... I will send the players their targets in DM:\n"+ dmtargets, flags: 64 });
 
 			if (users.length > 2) {
 
@@ -199,6 +199,6 @@ module.exports = {
 				errors = errors + '\n\nERROR: Not enough unique users identified, unable to assign targets to everyone';
 			}
 
-			await interaction.followUp({ content: errors, ephemeral: true });
+			await interaction.followUp({ content: errors, flags: 64 });
 		}
 };

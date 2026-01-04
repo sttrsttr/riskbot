@@ -144,7 +144,7 @@ module.exports = {
 			}
 
 
-			await interaction.reply({ content: "I am on it... I will send the imposters some information in DM:\n"+ dmtargets, ephemeral: true });
+			await interaction.reply({ content: "I am on it... I will send the imposters some information in DM:\n"+ dmtargets, flags: 64 });
 
 			if (users.length > impostercount) {
 
@@ -191,7 +191,7 @@ module.exports = {
 
 					} catch (error) {
 						console.error(error);
-						await interaction.followUp({ content: "Error running command, please try again later", ephemeral: true });
+						await interaction.followUp({ content: "Error running command, please try again later", flags: 64 });
 					}
 
 				} else {
@@ -241,7 +241,7 @@ module.exports = {
 					
 					} catch (error) {
 						console.error(error);
-						await interaction.followUp({ content: "Error running command, please try again later", ephemeral: true });
+						await interaction.followUp({ content: "Error running command, please try again later", flags: 64 });
 					}
 
 
@@ -253,6 +253,6 @@ module.exports = {
 				errors = errors + '\n\nERROR: Not enough unique users identified, unable to assign imposters';
 			}
 
-			await interaction.followUp({ content: errors, ephemeral: true });
+			await interaction.followUp({ content: errors, flags: 64 });
 		}
 };

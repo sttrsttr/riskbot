@@ -14,7 +14,7 @@ async execute(interaction, client) {
 
         try{
 
-            await interaction.reply({ content: "I am on it...", ephemeral: true });
+            await interaction.reply({ content: "I am on it...", flags: 64 });
 
             const parentChannel = interaction.guild?.channels.cache.get(interaction.channel?.parentId);
             const channelId = (parentChannel && parentChannel.type === 4)
@@ -101,13 +101,13 @@ async execute(interaction, client) {
                         const pingmessageid = await interactionchannel.send({ content: message, components: [], allowedMentions: { roles: mentionroles, repliedUser: false } });
     
                     } else {
-                        await interaction.followUp({ content: "ERROR: You are not staff in this event, so you are not allowed to ping waitlist", ephemeral: true });
+                        await interaction.followUp({ content: "ERROR: You are not staff in this event, so you are not allowed to ping waitlist", flags: 64 });
                     }
     
                 }
 
             } else {
-                await interaction.followUp({ content: "ERROR: I could not find any events active in this channel", ephemeral: true });
+                await interaction.followUp({ content: "ERROR: I could not find any events active in this channel", flags: 64 });
             }
         }catch(err){
             console.log(err)

@@ -16,7 +16,7 @@ module.exports = {
 
 		const optionUser = interaction.options.getMember('user');
 
-		await interaction.reply({ content: "I am on it...  connecting to Friends of Risk now", ephemeral: true });
+		await interaction.reply({ content: "I am on it...  connecting to Friends of Risk now", flags: 64 });
 
 		try {
 
@@ -35,7 +35,7 @@ module.exports = {
 
 			const data = await response.json();
 			if (!data) {
-				await interaction.followUp({ content: "User not found or no data available.", ephemeral: true });
+				await interaction.followUp({ content: "User not found or no data available.", flags: 64 });
 				return;
 			}
 
@@ -45,17 +45,17 @@ module.exports = {
 			replymessage += `**ELO rank:** ${data.data.ffa_elo_rank}\n`;
 			replymessage += `**ELO score:** ${data.data.ffa_elo_score}\n`;
 
-			await interaction.followUp({ content: replymessage, ephemeral: true });				
+			await interaction.followUp({ content: replymessage, flags: 64 });				
 
 		} catch (error) {
 			console.error(error);
-			await interaction.followUp({ content: "Error, I might not have the correct permissions to send messages to this channel.", ephemeral: true });				
+			await interaction.followUp({ content: "Error, I might not have the correct permissions to send messages to this channel.", flags: 64 });				
 		}
 
 
 	  } catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error, please try again later", flags: 64 });
 	  }
 	}
   };

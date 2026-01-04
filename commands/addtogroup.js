@@ -17,7 +17,7 @@ module.exports = {
 
         try {
 
-            await interaction.reply({ content: "I am on it...", ephemeral: true });
+            await interaction.reply({ content: "I am on it...", flags: 64 });
 
             const threadid = interaction.channelId;
             const player = interaction.options.getMember('player');
@@ -27,6 +27,9 @@ module.exports = {
                 return;
             }
             const member = await guild.members.fetch(player.id);
+
+            // getEventGroupThread
+            // Check if `completed` IS NULL
 
             // Connect to SQL database
             var con = mysql.createConnection({
@@ -109,27 +112,27 @@ module.exports = {
                                         await member.roles.add(group.participantrole);
 
                                     } else {
-                                        await interaction.followUp({ content: "ERROR: This player has already played this round", ephemeral: true });
+                                        await interaction.followUp({ content: "ERROR: This player has already played this round", flags: 64 });
                                     }
                                 } else {
-                                    await interaction.followUp({ content: "ERROR: This player is not in the same bracket as this group", ephemeral: true });
+                                    await interaction.followUp({ content: "ERROR: This player is not in the same bracket as this group", flags: 64 });
                                 }
                             } else {
-                                await interaction.followUp({ content: "ERROR: This player is not in this tournament", ephemeral: true });
+                                await interaction.followUp({ content: "ERROR: This player is not in this tournament", flags: 64 });
                             }
                         } else {
-                            await interaction.followUp({ content: "ERROR: This player is not in this tournament", ephemeral: true });
+                            await interaction.followUp({ content: "ERROR: This player is not in this tournament", flags: 64 });
                         }
 
 
                     } else {
-                        await interaction.followUp({ content: "ERROR: You are not staff in this event, so you are not allowed to ping waitlist", ephemeral: true });
+                        await interaction.followUp({ content: "ERROR: You are not staff in this event, so you are not allowed to ping waitlist", flags: 64 });
                     }
 
                 }
 
             } else {
-                await interaction.followUp({ content: "ERROR: I could not find any events active in this channel", ephemeral: true });
+                await interaction.followUp({ content: "ERROR: I could not find any events active in this channel", flags: 64 });
             }
         } catch (err) {
             console.log(err)

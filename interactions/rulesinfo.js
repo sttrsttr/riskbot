@@ -32,15 +32,15 @@ module.exports = async (interaction) => {
 
 				let message = `You can view information about the group on the Friends of Risk website\n\n[Event main Page](https://friendsofrisk.com/eventmanager/${group.eventid}/)\n[All Groups This Round](https://friendsofrisk.com/eventmanager/${group.eventid}/round/${group.roundid}/)\n[Settings](https://friendsofrisk.com/eventmanager/${group.eventid}/gamesettings/)\n[Current Standings](https://friendsofrisk.com/eventmanager/${group.eventid}/players/)\n[Rules](${group.ruleslink})\n`;
 
-				await interaction.reply({ content: message, components: [], ephemeral: true });
+				await interaction.reply({ content: message, components: [], flags: 64 });
 
 			} else {
-				await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+				await interaction.reply({ content: "Error, please try again later", flags: 64 });
 			}
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+			await interaction.reply({ content: "Error, please try again later", flags: 64 });
 		}
 
 };

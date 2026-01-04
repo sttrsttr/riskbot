@@ -22,10 +22,10 @@ module.exports = {
             const staffThreadId = getStaffThread(channelId);
 
             await addPlayerToEvent(client, guild.id, channelId, user.id, staffThreadId);
-            await interaction.reply({ content: `Added <@${user.id}> as a player to the event.`, ephemeral: true });
+            await interaction.reply({ content: `Added <@${user.id}> as a player to the event.`, flags: 64 });
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: 'Error adding user as player.', ephemeral: true });
+            await interaction.reply({ content: 'Error adding user as player.', flags: 64 });
         }
     }
 };

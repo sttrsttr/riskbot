@@ -41,15 +41,15 @@ module.exports = async (interaction) => {
 				const row = new ActionRowBuilder().addComponents(btn1);
 				components.push(row);
 
-				await interaction.reply({ content: message, components: components, ephemeral: true });
+				await interaction.reply({ content: message, components: components, flags: 64 });
 
 			} else {
-				await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+				await interaction.reply({ content: "Error, please try again later", flags: 64 });
 			}
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+			await interaction.reply({ content: "Error, please try again later", flags: 64 });
 		}
 
 };

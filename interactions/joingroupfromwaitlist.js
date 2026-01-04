@@ -8,7 +8,7 @@ module.exports = async (interaction) => {
 
 
             try {
-                await interaction.reply({ content: `Please stand by while I am checking some stuff`, ephemeral: true });
+                await interaction.reply({ content: `Please stand by while I am checking some stuff`, flags: 64 });
     
                 // Connect to SQL database
                 var con = mysql.createConnection({
@@ -108,12 +108,12 @@ module.exports = async (interaction) => {
     
     
                             } else {
-                                await interaction.followUp({ content: `${member} would like to take this spot`, ephemeral: false });
+                                await interaction.followUp({ content: `${member} would like to take this spot`, flags: 0 });
                             }
     
     
                         } else {
-                            await interaction.followUp({ content: `I am sorry, this group is now full`, ephemeral: true });
+                            await interaction.followUp({ content: `I am sorry, this group is now full`, flags: 64 });
     
                             sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `pingmessageid` = NULL WHERE `id` = " + group.id + "";
                             const result2 = await new Promise((resolve, reject) => {
@@ -126,15 +126,15 @@ module.exports = async (interaction) => {
                         }
     
                     } else {
-                        await interaction.followUp({ content: `You are not on the waitlist/no-show list, and cannot join this group`, ephemeral: true });
+                        await interaction.followUp({ content: `You are not on the waitlist/no-show list, and cannot join this group`, flags: 64 });
                     }
                 } else {
-                    await interaction.followUp({ content: `It is not possible to join this group now`, ephemeral: true });
+                    await interaction.followUp({ content: `It is not possible to join this group now`, flags: 64 });
                 }
                 con.end();
             } catch (error) {
                 console.error(error);
-                await interaction.followUp({ content: "Error, please try again later", ephemeral: true });
+                await interaction.followUp({ content: "Error, please try again later", flags: 64 });
             }
     
     

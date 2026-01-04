@@ -17,7 +17,7 @@ module.exports = {
 async execute(interaction, client) {
 	try {
 
-		await interaction.reply({ content: "Please stand by while I create the event for you...", ephemeral: true });
+		await interaction.reply({ content: "Please stand by while I create the event for you...", flags: 64 });
 
 		const interactionUser = await interaction.guild.members.fetch(interaction.user.id);
 		const eventname = interaction.options.getString('eventname').replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 50);
@@ -34,7 +34,7 @@ async execute(interaction, client) {
 		}
 		
 		if (!botMember.permissions.has('ManageRoles')) {
-			await interaction.followUp({ content: `Sorry, I don't have the correct permissions in this server to manage roles`, ephemeral: true });
+			await interaction.followUp({ content: `Sorry, I don't have the correct permissions in this server to manage roles`, flags: 64 });
 			return;
 		}
 
@@ -261,19 +261,19 @@ async execute(interaction, client) {
 		} catch (error) {
 			console.error(error);
 			if (interaction.replied || interaction.deferred) {
-				await interaction.followUp({ content: "Error, please try again later", ephemeral: true });
+				await interaction.followUp({ content: "Error, please try again later", flags: 64 });
 			} else {
-				await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+				await interaction.reply({ content: "Error, please try again later", flags: 64 });
 			}
 		}
 
 		con.end();
 
-		await interaction.followUp({ content: errors, ephemeral: true });
+		await interaction.followUp({ content: errors, flags: 64 });
 
 	} catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error, please try again later", flags: 64 });
 		}	
 	}
 };

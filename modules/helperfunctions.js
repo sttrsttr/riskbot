@@ -1,5 +1,7 @@
+const { Client, Collection, Events, GatewayIntentBits, Partials, ChannelType, AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, GuildOnboardingPrompt } = require('discord.js');
+
 // API functions
-async function add_to_thread(serverid, channelid, threadid, userid) {
+async function add_to_thread(client, serverid, channelid, threadid, userid) {
 	try {
 
 		const guild = await client.guilds.fetch(serverid);
@@ -84,7 +86,7 @@ async function countMemes(client, serverid, channelid, startdate) {
 
 
 // API functions - removes all members from that role
-async function emptyRole(serverid, roleid) {
+async function emptyRole(client, serverid, roleid) {
 	try {
 
 		const guild = await client.guilds.fetch(serverid);
@@ -114,7 +116,7 @@ async function emptyRole(serverid, roleid) {
 }
 
 
-async function fetchRole(serverid, roleid) {
+async function fetchRole(client, serverid, roleid) {
 	try {
 		const guild = await client.guilds.fetch(serverid);
 		if (!guild) {
@@ -145,7 +147,7 @@ async function fetchRole(serverid, roleid) {
 
 
 // API functions
-async function deleteRole(serverid, roleid) {
+async function deleteRole(client, serverid, roleid) {
 	try {
 
 		const guild = await client.guilds.fetch(serverid);
@@ -165,7 +167,7 @@ async function deleteRole(serverid, roleid) {
 }
 
 
-async function deleteChannel(serverid, channelid) {
+async function deleteChannel(client, serverid, channelid) {
 	try {
 
 		const guild = await client.guilds.fetch(serverid);
@@ -182,7 +184,7 @@ async function deleteChannel(serverid, channelid) {
 }
 
 
-async function deleteThread(serverid, channelid, threadid) {
+async function deleteThread(client, serverid, channelid, threadid) {
 	try {
 		// Fetch the guild (server)
 		const guild = await client.guilds.fetch(serverid);
@@ -223,7 +225,7 @@ async function deleteThread(serverid, channelid, threadid) {
 
 
 
-async function removefromthread(server, channelid, threadid, userid) {
+async function removefromthread(client, server, channelid, threadid, userid) {
 	try {
 
 		const guild = await client.guilds.fetch(server);
@@ -262,7 +264,7 @@ async function removefromthread(server, channelid, threadid, userid) {
 
 
 // API functions
-async function create_thread(tserver, tchannel, threadname, tusers, tstaffrole, tmessage) {
+async function create_thread(client, tserver, tchannel, threadname, tusers, tstaffrole, tmessage) {
 
 	try {
 
@@ -335,7 +337,7 @@ async function create_thread(tserver, tchannel, threadname, tusers, tstaffrole, 
 
 
 // API functions
-async function createRole(tserver, trolename) {
+async function createRole(client, tserver, trolename) {
 
 	try {
 
@@ -370,7 +372,7 @@ async function createRole(tserver, trolename) {
 
 
 // API functions
-async function message_thread(msgserver, msgchannel, msgthread, msg, tusers) {
+async function message_thread(client, msgserver, msgchannel, msgthread, msg, tusers) {
 
 	try {
 
@@ -457,7 +459,7 @@ async function message_thread(msgserver, msgchannel, msgthread, msg, tusers) {
 
 
 // API functions
-async function message_channel(msgserver, msgchannel, msg) {
+async function message_channel(client, msgserver, msgchannel, msg) {
 
 	try {
 		const guild = await client.guilds.fetch(msgserver);

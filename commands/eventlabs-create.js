@@ -18,7 +18,7 @@ module.exports = {
 async execute(interaction, client) {
 	try {
 
-		await interaction.reply({ content: "Please stand by while I do my stuff...", ephemeral: true });
+		await interaction.reply({ content: "Please stand by while I do my stuff...", flags: 64 });
 	
 		const interactionUser = await interaction.guild.members.fetch(interaction.user.id);
 		const eventname = interaction.options.getString('eventname').replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 50);
@@ -256,7 +256,7 @@ async execute(interaction, client) {
 					await updateEventChannelIds();
 	
 				} else {
-					await interaction.followUp({ content: "Sorry, you already have an eventlabs event not archived yet. Please archive that one before you start a new one", ephemeral: true });
+					await interaction.followUp({ content: "Sorry, you already have an eventlabs event not archived yet. Please archive that one before you start a new one", flags: 64 });
 
 				}
 
@@ -265,19 +265,19 @@ async execute(interaction, client) {
 			} catch (error) {
 				console.error(error);
 				if (interaction.replied || interaction.deferred) {
-					await interaction.followUp({ content: "Error, please try again later", ephemeral: true });
+					await interaction.followUp({ content: "Error, please try again later", flags: 64 });
 				} else {
-					await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+					await interaction.reply({ content: "Error, please try again later", flags: 64 });
 				}
 			}
 	
 		con.end();
 
-		await interaction.followUp({ content: errors, ephemeral: true });
+		await interaction.followUp({ content: errors, flags: 64 });
 
 	} catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error, please try again later", flags: 64 });
 		}	
 	}
 };

@@ -7,7 +7,7 @@ module.exports = async (interaction) => {
 	const messageid = interaction.message.id;
 
     		try {
-			await interaction.reply({ content: "Please stand by...", ephemeral: true });
+			await interaction.reply({ content: "Please stand by...", flags: 64 });
 
 			// Connect to SQL database
 			var con = mysql.createConnection({
@@ -47,12 +47,12 @@ module.exports = async (interaction) => {
 				});
 
 			} else {
-				await interaction.followUp({ content: "I am not able to ping the event staff for you, sorry.", ephemeral: true });
+				await interaction.followUp({ content: "I am not able to ping the event staff for you, sorry.", flags: 64 });
 			}
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.followUp({ content: "Error, please try again later", ephemeral: true });
+			await interaction.followUp({ content: "Error, please try again later", flags: 64 });
 		}
 
 };

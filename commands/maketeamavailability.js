@@ -121,7 +121,7 @@ module.exports = {
 		}
 
 		try {
-			await interaction.reply({ content: message, ephemeral: true });
+			await interaction.reply({ content: message, flags: 64 });
 		} catch (error) {
 			// Handle errors
 			console.error("Error:", error);
@@ -131,7 +131,7 @@ module.exports = {
 
 	  } catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error running command, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error running command, please try again later", flags: 64 });
 	  }
 	}
   };

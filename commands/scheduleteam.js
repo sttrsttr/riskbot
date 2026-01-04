@@ -44,7 +44,7 @@ module.exports = {
 	async execute(interaction) {
 	  try {
 
-//		await interaction.reply({ content: "Give me a second please...\n"+ dmtargets, ephemeral: true });
+//		await interaction.reply({ content: "Give me a second please...\n"+ dmtargets, flags: 64 });
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
@@ -67,7 +67,7 @@ module.exports = {
 		user[2] = interaction.options.getMember('teamcaptain2');
 		const addmessage = interaction.options.getString('message') ?? '';
 
-		await interaction.reply({ content: "I am on it...  I will check if they have some available times set up in Friends of Risk", ephemeral: true });
+		await interaction.reply({ content: "I am on it...  I will check if they have some available times set up in Friends of Risk", flags: 64 });
 
 		let usercnt = 0;
 		let gametimes = {
@@ -315,19 +315,19 @@ module.exports = {
 				await message.react("🈯");
 			} catch (error) {
 				console.error(error);
-				await interaction.followUp({ content: "Error, I might not have the correct permissions to react to messages in this channel.", ephemeral: true });				
+				await interaction.followUp({ content: "Error, I might not have the correct permissions to react to messages in this channel.", flags: 64 });				
 			}
 
 
 		} catch (error) {
 			console.error(error);
-			await interaction.followUp({ content: "Error, I might not have the correct permissions to send messages to this channel.", ephemeral: true });				
+			await interaction.followUp({ content: "Error, I might not have the correct permissions to send messages to this channel.", flags: 64 });				
 		}
 
 
 	  } catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error, please try again later", flags: 64 });
 	  }
 	}
   };

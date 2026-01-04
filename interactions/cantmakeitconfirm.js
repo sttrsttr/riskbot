@@ -1,3 +1,5 @@
+const { updatecheckinmessage } = require('../modules/signuphandler.js');
+
 var mysql = require('mysql2');
 
 module.exports = async (interaction) => {
@@ -34,7 +36,7 @@ module.exports = async (interaction) => {
 				const thread = await guild.channels.fetch(channelid);
 				const member = await guild.members.fetch(userid);
 
-				await interaction.reply({ content: "Goodbye!", ephemeral: true });
+				await interaction.reply({ content: "Goodbye!", flags: 64 });
 
 				const welcomemsg = `<@${userid}> just left this group`;
 				await thread.send({ content: welcomemsg, allowedMentions: { users: [userid], repliedUser: false } });
@@ -62,12 +64,12 @@ module.exports = async (interaction) => {
 				await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
 			} else {
-				await interaction.reply({ content: "I am not able to put you on the waitlist, sorry!", ephemeral: true });
+				await interaction.reply({ content: "I am not able to put you on the waitlist, sorry!", flags: 64 });
 			}
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: "Error, please try again later", ephemeral: true });
+			await interaction.reply({ content: "Error, please try again later", flags: 64 });
 		}
 
 };

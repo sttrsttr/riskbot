@@ -7,7 +7,7 @@ module.exports = async (interaction) => {
 	const messageid = interaction.message.id;
 
     		try {
-			await interaction.reply({ content: `Please stand by...`, ephemeral: true });
+			await interaction.reply({ content: `Please stand by...`, flags: 64 });
 
 			// Connect to SQL database
 			var con = mysql.createConnection({
@@ -54,9 +54,9 @@ module.exports = async (interaction) => {
 								resolve(result);
 							});
 						});
-						await interaction.followUp({ content: 'Click this link to add the scores for this group: <https://friendsofrisk.com/eventmanager/' + group.eventid + '/group/' + group.id + '>', ephemeral: true, allowedMentions: { parse: [] } });
+						await interaction.followUp({ content: 'Click this link to add the scores for this group: <https://friendsofrisk.com/eventmanager/' + group.eventid + '/group/' + group.id + '>', flags: 64, allowedMentions: { parse: [] } });
 					} else {
-						await interaction.followUp({ content: `I was unable to create a link for you. Please try again later.`, ephemeral: true });
+						await interaction.followUp({ content: `I was unable to create a link for you. Please try again later.`, flags: 64 });
 					}
 
 
@@ -64,9 +64,9 @@ module.exports = async (interaction) => {
 				} else {
 
 					if (group.scoring == "POINTS") {
-						await interaction.followUp({ content: `Please just write the results in a message in this thread like this\n\n1st: @player1 (1 bounty)\n2nd: @player2 (2 bounties)\n3rd: @player3\n4th @player4\n\nand get the other players to verify with a checkmark, then ping event staff who will gather the results.`, ephemeral: true });
+						await interaction.followUp({ content: `Please just write the results in a message in this thread like this\n\n1st: @player1 (1 bounty)\n2nd: @player2 (2 bounties)\n3rd: @player3\n4th @player4\n\nand get the other players to verify with a checkmark, then ping event staff who will gather the results.`, flags: 64 });
 					} else {
-						await interaction.followUp({ content: `Please just write the results in a message in this thread like this\n\nWinner:\n@player1\n@player3\n@player4\n\nLosers\n$player2\n@player5\n@player6\n\nand get the other players to verify with a checkmark, then ping event staff who will gather the results.`, ephemeral: true });
+						await interaction.followUp({ content: `Please just write the results in a message in this thread like this\n\nWinner:\n@player1\n@player3\n@player4\n\nLosers\n$player2\n@player5\n@player6\n\nand get the other players to verify with a checkmark, then ping event staff who will gather the results.`, flags: 64 });
 					}
 
 				}
@@ -78,7 +78,7 @@ module.exports = async (interaction) => {
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.followUp({ content: "Error, please try again later", ephemeral: true });
+			await interaction.followUp({ content: "Error, please try again later", flags: 64 });
 		}
 
 

@@ -16,7 +16,7 @@ module.exports = {
 	async execute(interaction) {
 	  try {
 
-//		await interaction.reply({ content: "Give me a second please...\n"+ dmtargets, ephemeral: true });
+//		await interaction.reply({ content: "Give me a second please...\n"+ dmtargets, flags: 64 });
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
@@ -55,7 +55,7 @@ module.exports = {
 				  resolve(result);
 				});
 			  });
-			  await interaction.reply({ content: 'Click this link to update your availability: https://www.friendsofrisk.com/register/availability/login/'+ rows[0].id +'/'+ guid, ephemeral: true });
+			  await interaction.reply({ content: 'Click this link to update your availability: https://www.friendsofrisk.com/register/availability/login/'+ rows[0].id +'/'+ guid, flags: 64 });
 
 		} else {
 			// Sign up user
@@ -71,9 +71,9 @@ module.exports = {
 				const rows = result;
 				const insertedId = result.insertId;
 				if (insertedId) {
-					await interaction.reply({ content: 'Click this link to update your availability: https://www.friendsofrisk.com/register/availability/verify/'+ insertedId +'/'+ guid, ephemeral: true });
+					await interaction.reply({ content: 'Click this link to update your availability: https://www.friendsofrisk.com/register/availability/verify/'+ insertedId +'/'+ guid, flags: 64 });
 				} else {
-					await interaction.reply({ content: 'Something went horribly wrong, or I am stupid. Please reach out to someone for help with this', ephemeral: true });
+					await interaction.reply({ content: 'Something went horribly wrong, or I am stupid. Please reach out to someone for help with this', flags: 64 });
 				}
 			} catch (error) {
 				// Handle errors
@@ -85,7 +85,7 @@ module.exports = {
 
 	  } catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error running command, please try again later", ephemeral: true });
+		await interaction.reply({ content: "Error running command, please try again later", flags: 64 });
 	  }
 	}
   };

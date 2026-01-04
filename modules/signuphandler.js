@@ -553,7 +553,6 @@ async function pingwaitlist(client, thread) {
             components.push(row);
 
             const pingmessageid = await channel.send({ content: message, components: components, allowedMentions: { roles: mentionroles, repliedUser: false } });
-        }
 
             sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `waitlistpinged` = NOW(), `pingmessageid` = " + pingmessageid + " WHERE `id` = " + group.id + "";
             const result2 = await new Promise((resolve, reject) => {
@@ -562,6 +561,7 @@ async function pingwaitlist(client, thread) {
                     resolve(result);
                 });
             });
+            }
         }
         con.end();
     } catch (error) {

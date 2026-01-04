@@ -12,12 +12,12 @@ module.exports = {
         ),
     async execute(interaction, client) {
         try {
-            await interaction.reply({ content: 'Creating anonymous event channel...', ephemeral: true });
+            await interaction.reply({ content: 'Creating anonymous event channel...', flags: 64 });
             const guild = await client.guilds.fetch(interaction.guild.id);
             const eventName = interaction.options.getString('eventname').replace(/[^a-zA-Z0-9-_ ]/g, '').substring(0, 50);
             const botMember = guild.members.me;
             if (!botMember.permissions.has('ManageChannels')) {
-                await interaction.followUp({ content: `Sorry, I don't have permission to manage channels.`, ephemeral: true });
+                await interaction.followUp({ content: `Sorry, I don't have permission to manage channels.`, flags: 64 });
                 return;
             }
             // Create private main channel
@@ -85,10 +85,10 @@ module.exports = {
             } else {
                 console.warn(`Failed to add ${interaction.user.tag} to the staff thread.`);
             }
-            await interaction.followUp({ content: `Anonymous event channel created: <#${channel.id}>\nStaff thread created: <#${staffThread.id}>`, ephemeral: true });
+            await interaction.followUp({ content: `Anonymous event channel created: <#${channel.id}>\nStaff thread created: <#${staffThread.id}>`, flags: 64 });
         } catch (error) {
             console.error(error);
-            await interaction.followUp({ content: 'Error creating event channel.', ephemeral: true });
+            await interaction.followUp({ content: 'Error creating event channel.', flags: 64 });
         }
     }
 };
