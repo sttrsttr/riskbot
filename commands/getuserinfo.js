@@ -1,6 +1,4 @@
 const { SlashCommandBuilder, quote } = require('discord.js');
-var mysql = require('mysql2');
-const { mysql_host, mysql_username, mysql_password, mysql_database } = require('../riskbot_config.json');
 
 module.exports = {
 	data: new SlashCommandBuilder()

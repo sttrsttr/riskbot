@@ -1,6 +1,5 @@
 
 const { SlashCommandBuilder } = require('discord.js');
-const { mysql_host, mysql_username, mysql_password, mysql_database } = require('../riskbot_config.json');
 var mysql = require('mysql2');
 
 module.exports = {
@@ -69,9 +68,9 @@ module.exports = {
 
 				// Connect to SQL database
 				var con = mysql.createConnection({
-					host: mysql_host,
-					user: mysql_username,
-					password: mysql_password,
+					host: global.config.mysql_host,
+					user: global.config.mysql_username,
+					password: global.config.mysql_password,
 					supportBigNumbers: true,
 					bigNumberStrings: true
 				});
@@ -80,7 +79,7 @@ module.exports = {
 					if (err) throw err;
 				});
 
-				let sql = "SELECT SUM(`points`) AS `sum` FROM `"+ mysql_database +"`.`karmapoints` WHERE `playerid` = "+ user.id +"";
+				let sql = "SELECT SUM(`points`) AS `sum` FROM `"+ global.config.mysql_database +"`.`karmapoints` WHERE `playerid` = "+ user.id +"";
 				let result = await new Promise((resolve, reject) => {
 					con.query(sql, function (err, result) {
 						if (err) reject(err);
@@ -99,7 +98,7 @@ module.exports = {
 					score = score-(sum+score);
 				}
 
-				sql = "INSERT INTO `"+ mysql_database +"`.`karmapoints` VALUES (NULL,"+ user.id +",NOW(),"+ score +","+ interactionUser.id +",'"+ action +"','"+ comment +"')";
+				sql = "INSERT INTO `"+ global.config.mysql_database +"`.`karmapoints` VALUES (NULL,"+ user.id +",NOW(),"+ score +","+ interactionUser.id +",'"+ action +"','"+ comment +"')";
 				result = await new Promise((resolve, reject) => {
 					con.query(sql, function (err, result) {
 						if (err) reject(err);

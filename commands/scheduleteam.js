@@ -48,9 +48,9 @@ module.exports = {
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
-			host: mysql_host,
-			user: mysql_username,
-			password: mysql_password,
+			host: global.config.mysql_host,
+			user: global.config.mysql_username,
+			password: global.config.mysql_password,
 			supportBigNumbers: true,
 			bigNumberStrings: true
 		});  
@@ -100,7 +100,7 @@ module.exports = {
 			if (user[i]) {
 				//let name = user[i].user.globalName || user[i].user.username || user[i].displayName || user[i].user.nickname;
 				usercnt++;
-				let sql = "SELECT * FROM `"+ mysql_database +"`.`users` WHERE `discordid` = '"+ user[i].id +"' LIMIT 1";
+				let sql = "SELECT * FROM `"+ global.config.mysql_database +"`.`users` WHERE `discordid` = '"+ user[i].id +"' LIMIT 1";
 				const result = await new Promise((resolve, reject) => {
 				  con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -112,7 +112,7 @@ module.exports = {
 				let dstring = "";
 				if (rows.length == 1) {
 					dmtargets = dmtargets +'> ' + user[i].toString() + "\n";
-					let sql2 = "SELECT * FROM `"+ mysql_database +"`.`user__teamavailability` WHERE `userid` = '"+ rows[0].id +"' ORDER BY `weekday` ASC, `hour` ASC";
+					let sql2 = "SELECT * FROM `"+ global.config.mysql_database +"`.`user__teamavailability` WHERE `userid` = '"+ rows[0].id +"' ORDER BY `weekday` ASC, `hour` ASC";
 					const result2 = await new Promise((resolve, reject) => {
 					  con.query(sql2, function (err, result2) {
 						if (err) reject(err);

@@ -1,7 +1,7 @@
 // Load required modules and config
 const { SlashCommandBuilder, ChannelType, PermissionsBitField } = require('discord.js');
 const { guilds, mysql_host, mysql_username, mysql_password, mysql_database } = require('../riskbot_config.json');
-const { updateallowedChannelIds, updatechatChannelIds } = require('../modules/signuphandler.js');
+const { updateEventChannelIds } = require('../modules/signuphandler.js');
 
 var mysql = require('mysql2');
 
@@ -25,9 +25,9 @@ async execute(interaction, client) {
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
-			host: mysql_host,
-			user: mysql_username,
-			password: mysql_password,
+			host: global.config.mysql_host,
+			user: global.config.mysql_username,
+			password: global.config.mysql_password,
 			supportBigNumbers: true,
 			bigNumberStrings: true
 		});
@@ -41,7 +41,7 @@ async execute(interaction, client) {
 
 			try {
 
-				let sql = "SELECT 1 FROM `"+ mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ mysql_database +"`.`eventmanager__events_status` es ON e.`id` = es.`eventid` AND es.`validto` IS NULL AND es.`status` != 'ARCHIVED' AND e.`owner` = "+ interaction.user.id +" AND e.`type` = 'EVENTLABS'";
+				let sql = "SELECT 1 FROM `"+ global.config.mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ global.config.mysql_database +"`.`eventmanager__events_status` es ON e.`id` = es.`eventid` AND es.`validto` IS NULL AND es.`status` != 'ARCHIVED' AND e.`owner` = "+ interaction.user.id +" AND e.`type` = 'EVENTLABS'";
 				let result = await new Promise((resolve, reject) => {
 					con.query(sql, function (err, result) {
 						if (err) reject(err);
@@ -49,7 +49,7 @@ async execute(interaction, client) {
 					});
 				});
 				if (result.length < 5) {
-					const eventlabsserverid = guilds.MAIN;
+					const eventlabsserverid = global.config.guilds.MAIN;
 					const eventlabscategory = "1286780709100589080";
 	
 					const guild = await client.guilds.fetch(eventlabsserverid);
@@ -66,7 +66,7 @@ async execute(interaction, client) {
 						return;
 					}
 	
-					sql = "INSERT INTO `"+ mysql_database +"`.`eventmanager__events` VALUES (NULL,'EVENTLABS','"+ eventname +"',"+ interaction.user.id +",NOW(),NULL,NULL,"+ eventlabsserverid +",1,'CLOSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,1,0,0,0,1,0,0,0)";
+					sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events` VALUES (NULL,'EVENTLABS','"+ eventname +"',"+ interaction.user.id +",NOW(),NULL,NULL,"+ eventlabsserverid +",1,'CLOSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,1,0,0,0,1,0,0,0,1)";
 					result = await new Promise((resolve, reject) => {
 						con.query(sql, function (err, result) {
 							if (err) reject(err);
@@ -75,7 +75,7 @@ async execute(interaction, client) {
 					});
 					const eventid = result.insertId;
 	
-					let sql_round = "INSERT INTO `"+ mysql_database +"`.`eventmanager__rounds` VALUES (NULL,"+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,1,NULL,NULL,NULL,NULL,NULL,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
+					let sql_round = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__rounds` VALUES (NULL,"+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,1,NULL,NULL,NULL,NULL,NULL,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
 					let result_round = await new Promise((resolve, reject) => {
 						con.query(sql_round, function (err, result) {
 							if (err) reject(err);
@@ -114,7 +114,7 @@ async execute(interaction, client) {
 						mentionable: false // Ensure role is not pingable
 					});
 
-					let sql_bracket = "INSERT INTO `"+ mysql_database +"`.`eventmanager__brackets` VALUES (NULL,"+ eventid +",1,'"+ noshowRole.id +"','Bracket 1')";
+					let sql_bracket = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__brackets` VALUES (NULL,"+ eventid +",1,'"+ noshowRole.id +"','Bracket 1')";
 					let result_bracket = await new Promise((resolve, reject) => {
 						con.query(sql_bracket, function (err, result) {
 							if (err) reject(err);
@@ -122,7 +122,7 @@ async execute(interaction, client) {
 						});
 					});
 
-					sql = "INSERT INTO `"+ mysql_database +"`.`eventmanager__events_status` VALUES (NULL,"+ eventid +",NOW(),NULL,'OPEN')";
+					sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events_status` VALUES (NULL,"+ eventid +",NOW(),NULL,'OPEN')";
 					result_status = await new Promise((resolve, reject) => {
 						con.query(sql, function (err, result) {
 							if (err) reject(err);
@@ -133,7 +133,7 @@ async execute(interaction, client) {
 	
 					await interactionUser.roles.add(staffRole);
 	
-					sql = "INSERT INTO `"+ mysql_database +"`.`eventmanager__admins` VALUES ("+ eventid +","+ interaction.user.id +")";
+					sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__admins` VALUES ("+ eventid +","+ interaction.user.id +")";
 					result = await new Promise((resolve, reject) => {
 						con.query(sql, function (err, result) {
 							if (err) reject(err);
@@ -240,7 +240,7 @@ async execute(interaction, client) {
 					await staffchannel.send(`This will be your staff thread, where only event staff will have access`);
 					await signupchannel.send(`### Signups are currently closed. Please check back later.`);
 	
-					sql = "UPDATE `"+ mysql_database +"`.`eventmanager__events` SET `signupchannel` = "+ signupchannel.id +",`mainchannel` = "+ newChannel.id +",`helpchannel` = "+ helpchannel.id +",`textchannel` = "+ textchannel.id +",`staffchannel` = "+ staffchannel.id +",`participantrole` = "+ participantRole.id +",`staffrole` = "+ staffRole.id +",`waitlistrole` = "+ waitlistRole.id +" WHERE `id` = "+ eventid +"";
+					sql = "UPDATE `"+ global.config.mysql_database +"`.`eventmanager__events` SET `signupchannel` = "+ signupchannel.id +",`mainchannel` = "+ newChannel.id +",`helpchannel` = "+ helpchannel.id +",`textchannel` = "+ textchannel.id +",`staffchannel` = "+ staffchannel.id +",`participantrole` = "+ participantRole.id +",`staffrole` = "+ staffRole.id +",`waitlistrole` = "+ waitlistRole.id +" WHERE `id` = "+ eventid +"";
 					result = await new Promise((resolve, reject) => {
 						con.query(sql, function (err, result) {
 							if (err) reject(err);
@@ -253,8 +253,7 @@ async execute(interaction, client) {
 	
 					errors = `Your event is created and ready to accept signups from players messaging 'signup' in https://discord.com/channels/${guild.id}/${signupchannel.id}. You can manage your event at https://friendsofrisk.com/eventmanager/${eventid}`;
 	
-					await updateallowedChannelIds();
-					await updatechatChannelIds();
+					await updateEventChannelIds();
 	
 				} else {
 					await interaction.followUp({ content: "Sorry, you already have an eventlabs event not archived yet. Please archive that one before you start a new one", ephemeral: true });

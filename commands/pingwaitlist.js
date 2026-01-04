@@ -25,9 +25,9 @@ async execute(interaction, client) {
 
             // Connect to SQL database
             var con = mysql.createConnection({
-                host: mysql_host,
-                user: mysql_username,
-                password: mysql_password,
+                host: global.config.mysql_host,
+                user: global.config.mysql_username,
+                password: global.config.mysql_password,
                 supportBigNumbers: true,
                 bigNumberStrings: true
             });
@@ -39,7 +39,7 @@ async execute(interaction, client) {
                 if (err) throw err;
             });
 
-            sql = "SELECT e.* FROM `"+ mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ mysql_database +"`.`eventmanager__events_status` es ON e.`id` = es.`eventid` AND es.`validto` IS NULL AND es.`status` != 'ARCHIVED' AND (e.`mainchannel` = "+ channelId +" OR e.`helpchannel` = "+ channelId +")";
+            sql = "SELECT e.* FROM `"+ global.config.mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ global.config.mysql_database +"`.`eventmanager__events_status` es ON e.`id` = es.`eventid` AND es.`validto` IS NULL AND es.`status` != 'ARCHIVED' AND (e.`mainchannel` = "+ channelId +" OR e.`helpchannel` = "+ channelId +")";
             result = await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
             if (result.length == 1) {
@@ -49,12 +49,12 @@ async execute(interaction, client) {
                     let mention;
                     let mentionroles;
 
-                    sql = "SELECT * FROM `"+ mysql_database +"`.`eventmanager__brackets` WHERE `eventid` = "+ event.id +"";
+                    sql = "SELECT * FROM `"+ global.config.mysql_database +"`.`eventmanager__brackets` WHERE `eventid` = "+ event.id +"";
                     brackets = await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
-                    sql = "SELECT 1 FROM `"+ mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ mysql_database +"`.`eventmanager__staff` es ON e.`id` = es.`eventid` AND es.`userid` = "+ interaction.user.id +" AND e.`id` = "+ event.id +"";
+                    sql = "SELECT 1 FROM `"+ global.config.mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ global.config.mysql_database +"`.`eventmanager__staff` es ON e.`id` = es.`eventid` AND es.`userid` = "+ interaction.user.id +" AND e.`id` = "+ event.id +"";
                     staff = await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
-                    sql = "SELECT 1 FROM `"+ mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ mysql_database +"`.`eventmanager__admins` es ON e.`id` = es.`eventid` AND es.`userid` = "+ interaction.user.id +" AND e.`id` = "+ event.id +"";
+                    sql = "SELECT 1 FROM `"+ global.config.mysql_database +"`.`eventmanager__events` e INNER JOIN `"+ global.config.mysql_database +"`.`eventmanager__admins` es ON e.`id` = es.`eventid` AND es.`userid` = "+ interaction.user.id +" AND e.`id` = "+ event.id +"";
                     admin = await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
     
                     if (staff.length > 0 || admin.length > 0) {
@@ -72,7 +72,7 @@ async execute(interaction, client) {
 
                         if (interactionchannel.isThread() && interaction.channelId != event.helpchannel && interaction.channelId != event.textchannel) {
 
-                            sql = "SELECT br.`noshowrole`, br.`bracketid`, br.`bracketname`, e.`serverid`, e.`helpchannel`, e.`waitlistrole`, e.`waitlistbracket`, eg.`name`, eg.`gametime`, eg.`id` FROM `"+ mysql_database +"`.`eventmanager__groups` eg INNER JOIN `"+ mysql_database +"`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `"+ mysql_database +"`.`eventmanager__events` e ON r.`eventid` = e.`id` INNER JOIN `"+ mysql_database +"`.`eventmanager__brackets` br ON br.`eventid` = e.`id` AND br.`bracketid` = r.`bracket` AND eg.`threadid` = '"+ interactionchannel.id +"' AND eg.`completed` IS NULL AND (eg.`waitlistpinged` IS NULL OR DATE_ADD(NOW(), INTERVAL -10 MINUTE) > eg.`waitlistpinged`)";
+                            sql = "SELECT br.`noshowrole`, br.`bracketid`, br.`bracketname`, e.`serverid`, e.`helpchannel`, e.`waitlistrole`, e.`waitlistbracket`, eg.`name`, eg.`gametime`, eg.`id` FROM `"+ global.config.mysql_database +"`.`eventmanager__groups` eg INNER JOIN `"+ global.config.mysql_database +"`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `"+ global.config.mysql_database +"`.`eventmanager__events` e ON r.`eventid` = e.`id` INNER JOIN `"+ global.config.mysql_database +"`.`eventmanager__brackets` br ON br.`eventid` = e.`id` AND br.`bracketid` = r.`bracket` AND eg.`threadid` = '"+ interactionchannel.id +"' AND eg.`completed` IS NULL AND (eg.`waitlistpinged` IS NULL OR DATE_ADD(NOW(), INTERVAL -10 MINUTE) > eg.`waitlistpinged`)";
                             const groupres = await new Promise((resolve, reject) => {
                             con.query(sql, function (err, result) {
                                 if (err) reject(err);

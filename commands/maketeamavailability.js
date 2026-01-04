@@ -46,9 +46,9 @@ module.exports = {
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
-			host: mysql_host,
-			user: mysql_username,
-			password: mysql_password,
+			host: global.config.mysql_host,
+			user: global.config.mysql_username,
+			password: global.config.mysql_password,
 			supportBigNumbers: true,
 			bigNumberStrings: true
 		});  
@@ -74,7 +74,7 @@ module.exports = {
 			}
 		}
 
-		let sql1 = "SELECT * FROM `"+ mysql_database +"`.`users` WHERE `discordid` = '"+ interactionUser.id +"' LIMIT 1";
+		let sql1 = "SELECT * FROM `"+ global.config.mysql_database +"`.`users` WHERE `discordid` = '"+ interactionUser.id +"' LIMIT 1";
 		const teamcaptain = await new Promise((resolve, reject) => {
 		  con.query(sql1, function (err, result) {
 			if (err) reject(err);
@@ -85,7 +85,7 @@ module.exports = {
 		let message;
 
 		if (teamcaptain[0].id) {
-			let sql3 = "DELETE FROM `"+ mysql_database +"`.`user__teamavailability` WHERE `userid` = "+ teamcaptain[0].id +"";
+			let sql3 = "DELETE FROM `"+ global.config.mysql_database +"`.`user__teamavailability` WHERE `userid` = "+ teamcaptain[0].id +"";
 			const result3 = await new Promise((resolve, reject) => {
 				con.query(sql3, function (err, result) {
 				  if (err) reject(err);
@@ -93,7 +93,7 @@ module.exports = {
 				});
 			});	
 
-			let sqlcount = "SELECT "+ teamcaptain[0].id +", a.`weekday`, a.`hour` FROM `"+ mysql_database +"`.`users` u INNER JOIN `"+ mysql_database +"`.`user__availability` a on u.id = a.userid and u.discordid in ("+ userids.join(',') +") group by a.weekday, a.hour having count(*) > "+ (playercount-1) +"";
+			let sqlcount = "SELECT "+ teamcaptain[0].id +", a.`weekday`, a.`hour` FROM `"+ global.config.mysql_database +"`.`users` u INNER JOIN `"+ global.config.mysql_database +"`.`user__availability` a on u.id = a.userid and u.discordid in ("+ userids.join(',') +") group by a.weekday, a.hour having count(*) > "+ (playercount-1) +"";
 			const count = await new Promise((resolve, reject) => {
 				con.query(sqlcount, function (err, result) {
 				  if (err) reject(err);
@@ -101,7 +101,7 @@ module.exports = {
 				});
 			});	
 
-			let sql = "INSERT INTO `"+ mysql_database +"`.`user__teamavailability` "+ sqlcount;
+			let sql = "INSERT INTO `"+ global.config.mysql_database +"`.`user__teamavailability` "+ sqlcount;
 			const result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 				  if (err) reject(err);

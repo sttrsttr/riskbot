@@ -1,7 +1,6 @@
 // Load required modules and config
 const { SlashCommandBuilder, ChannelType, PermissionsBitField } = require('discord.js');
-const { mysql_host, mysql_username, mysql_password, mysql_database } = require('../riskbot_config.json');
-const { updateallowedChannelIds, updatechatChannelIds } = require('../modules/signuphandler.js');
+const { updateEventChannelIds } = require('../modules/signuphandler.js');
 
 var mysql = require('mysql2');
 
@@ -41,9 +40,9 @@ async execute(interaction, client) {
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
-			host: mysql_host,
-			user: mysql_username,
-			password: mysql_password,
+			host: global.config.mysql_host,
+			user: global.config.mysql_username,
+			password: global.config.mysql_password,
 			supportBigNumbers: true,
 			bigNumberStrings: true
 		});
@@ -58,7 +57,7 @@ async execute(interaction, client) {
 
 		try {
 
-			let sql = "INSERT INTO `"+ mysql_database +"`.`eventmanager__events` VALUES (NULL,'NORMAL','"+ eventname +"',"+ interaction.user.id +",NOW(),NULL,NULL,"+ guild.id +",1,'CLOSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,1,0,0,0,1,0,0,0)";
+			let sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events` VALUES (NULL,'NORMAL','"+ eventname +"',"+ interaction.user.id +",NOW(),NULL,NULL,"+ guild.id +",1,'CLOSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,1,0,0,0,1,0,0,0,1)";
 			let result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -67,7 +66,7 @@ async execute(interaction, client) {
 			});
 			const eventid = result.insertId;
 
-			let sql_round = "INSERT INTO `"+ mysql_database +"`.`eventmanager__rounds` VALUES (NULL,"+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,1,NULL,NULL,NULL,NULL,NULL,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
+			let sql_round = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__rounds` VALUES (NULL,"+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,1,NULL,NULL,NULL,NULL,NULL,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
 			let result_round = await new Promise((resolve, reject) => {
 				con.query(sql_round, function (err, result) {
 					if (err) reject(err);
@@ -75,7 +74,7 @@ async execute(interaction, client) {
 				});
 			});
 
-			sql = "INSERT INTO `"+ mysql_database +"`.`eventmanager__events_status` VALUES (NULL,"+ eventid +",NOW(),NULL,'OPEN')";
+			sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events_status` VALUES (NULL,"+ eventid +",NOW(),NULL,'OPEN')";
 			result_status = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -114,7 +113,7 @@ async execute(interaction, client) {
 				mentionable: false // Ensure role is not pingable
 			});
 
-			let sql_bracket = "INSERT INTO `"+ mysql_database +"`.`eventmanager__brackets` VALUES (NULL,"+ eventid +",1,'"+ noshowRole.id +"','Bracket 1')";
+			let sql_bracket = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__brackets` VALUES (NULL,"+ eventid +",1,'"+ noshowRole.id +"','Bracket 1')";
 			let result_bracket = await new Promise((resolve, reject) => {
 				con.query(sql_bracket, function (err, result) {
 					if (err) reject(err);
@@ -236,7 +235,7 @@ async execute(interaction, client) {
 			await signupchannel.send(`### Signups are currently closed. Please check back later.`);
 
 
-			sql = "UPDATE `"+ mysql_database +"`.`eventmanager__events` SET `mainchannel` = "+ channel.id +", `signupchannel` = "+ signupchannel.id +",`helpchannel` = "+ helpchannel.id +",`textchannel` = "+ textchannel.id +",`staffchannel` = "+ staffchannel.id +",`participantrole` = "+ participantRole.id +",`staffrole` = "+ staffRole.id +",`waitlistrole` = "+ waitlistRole.id +" WHERE `id` = "+ eventid +"";
+			sql = "UPDATE `"+ global.config.mysql_database +"`.`eventmanager__events` SET `mainchannel` = "+ channel.id +", `signupchannel` = "+ signupchannel.id +",`helpchannel` = "+ helpchannel.id +",`textchannel` = "+ textchannel.id +",`staffchannel` = "+ staffchannel.id +",`participantrole` = "+ participantRole.id +",`staffrole` = "+ staffRole.id +",`waitlistrole` = "+ waitlistRole.id +" WHERE `id` = "+ eventid +"";
 			result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -249,10 +248,9 @@ async execute(interaction, client) {
 
 			errors = `Your event is created and ready for you to configure and open signups at https://friendsofrisk.com/eventmanager/${eventid}`;
 
-			await updateallowedChannelIds();
-			await updatechatChannelIds();
+			await updateEventChannelIds();
 
-			sql = "INSERT INTO `"+ mysql_database +"`.`eventmanager__admins` VALUES ("+ eventid +","+ interaction.user.id +")";
+			sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__admins` VALUES ("+ eventid +","+ interaction.user.id +")";
 			result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);

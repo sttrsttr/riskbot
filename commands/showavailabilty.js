@@ -26,9 +26,9 @@ module.exports = {
 
 		// Connect to SQL database
 		var con = mysql.createConnection({
-			host: mysql_host,
-			user: mysql_username,
-			password: mysql_password,
+			host: global.config.mysql_host,
+			user: global.config.mysql_username,
+			password: global.config.mysql_password,
 			supportBigNumbers: true,
 			bigNumberStrings: true
 		});  
@@ -65,7 +65,7 @@ module.exports = {
 
 		await interaction.reply({ content: "I am on it...  I will check if they have some available times set up in Friends of Risk", ephemeral: true });
 
-		let sql = "SELECT * FROM `"+ mysql_database +"`.`users` WHERE `discordid` = '"+ user.id +"' LIMIT 1";
+		let sql = "SELECT * FROM `"+ global.config.mysql_database +"`.`users` WHERE `discordid` = '"+ user.id +"' LIMIT 1";
 				const result = await new Promise((resolve, reject) => {
 				  con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -77,7 +77,7 @@ module.exports = {
 				let dstring = "";
 				if (rows.length == 1) {
 					replymessage = replymessage +'Here is the availability of ' + user.toString() + " (last updated "+ rows[0].avail_lastupdate +"):\n";
-					let sql2 = "SELECT * FROM `"+ mysql_database +"`.`user__availability` WHERE `userid` = '"+ rows[0].id +"' ORDER BY `weekday` ASC, `hour` ASC";
+					let sql2 = "SELECT * FROM `"+ global.config.mysql_database +"`.`user__availability` WHERE `userid` = '"+ rows[0].id +"' ORDER BY `weekday` ASC, `hour` ASC";
 					const result2 = await new Promise((resolve, reject) => {
 					  con.query(sql2, function (err, result2) {
 						if (err) reject(err);
