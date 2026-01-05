@@ -21,43 +21,43 @@ const { Client, Collection, Events, GatewayIntentBits, Partials, ChannelType, At
 global.config = require('./riskbot_config.json');
 
 /* Eventmanager tournament functions */
-const { 
-	swap_users, 
-	eventmanagegroupstartingnow, 
-	eventmanager24hourping, 
-	eventmanager48hourping, 
+const {
+	swap_users,
+	eventmanagegroupstartingnow,
+	eventmanager24hourping,
+	eventmanager48hourping,
 	eventmanagerwelcomethreads,
-	eventmanagerlockthreads, 
+	eventmanagerlockthreads,
 	lockThread,
-	eventmanager1hourping, 
-	eventmanagerCheckinStart, 
-	eventmanagerCheckinStop, 
-	availabilityMessage, 
-	pingstaff, 
-	pingparticipants, 
-	updateEventChannelIds, 
-	signupHandler, 
-	getAllowedChannelIds, 
+	eventmanager1hourping,
+	eventmanagerCheckinStart,
+	eventmanagerCheckinStop,
+	availabilityMessage,
+	pingstaff,
+	pingparticipants,
+	updateEventChannelIds,
+	signupHandler,
+	getAllowedChannelIds,
 	getChatChannelIds,
-	getAnnouncementChannelsIds 
-	} = require('./modules/signuphandler.js');
+	getAnnouncementChannelsIds
+} = require('./modules/signuphandler.js');
 
 const { checkNewButNotSignedUp } = require('./modules/memberhandler.js');
 const { refreshtournamentcalendar } = require('./modules/eventsCalendar.js');
 
 // Generic Riskbot helper functions
 const { add_to_thread,
-    countMemes,
-    emptyRole,
-    fetchRole,
-    deleteRole,
-    deleteChannel,
-    deleteThread,
-    removefromthread,
-    create_thread,
-    createRole,
-    message_thread,
-    message_channel 
+	countMemes,
+	emptyRole,
+	fetchRole,
+	deleteRole,
+	deleteChannel,
+	deleteThread,
+	removefromthread,
+	create_thread,
+	createRole,
+	message_thread,
+	message_channel
 } = require('./modules/helperfunctions.js');
 
 /* Special features for Math2Laws anonymous event thread thingy */
@@ -75,7 +75,11 @@ const client = new Client({
 	partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
+// Make client global for all modules/functions
 global.client = client;
+
+// Special role ID for main server participants who have never signed up for any events. Working together with the checkNewButNotSignedUp function.
+global.main_no_role = '1414643032002920468';
 
 // Load commands
 client.commands = new Collection();
@@ -86,9 +90,9 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 const buttonHandlers = new Map();
 const buttonsPath = path.join(__dirname, 'interactions');
 fs.readdirSync(buttonsPath).forEach(file => {
-  const customId = path.parse(file).name;
-  const handler = require(path.join(buttonsPath, file));
-  buttonHandlers.set(customId, handler);
+	const customId = path.parse(file).name;
+	const handler = require(path.join(buttonsPath, file));
+	buttonHandlers.set(customId, handler);
 });
 
 
@@ -112,7 +116,7 @@ client.once(Events.ClientReady, () => {
 	eventmanager48hourping(client);
 	eventmanagerwelcomethreads(client);
 
-	//countMemes(client, global.config.guilds.MAIN, "522892406199156747", "2025-01-20");
+	//countMemes(client, global.config.guilds.MAIN, "522892406199156747", "2025-01-20"); // Manual function used to help Trunk count meme votes
 	//checkNewButNotSignedUp(client, global.config.guilds.MAIN);
 
 	// Console log the current node and discord.js version
@@ -142,7 +146,7 @@ cron.schedule("0 0 */12 * * *", function () {
 // Scan for new members that hasnt signed up for any tournaments every day at 14:00
 /*
 cron.schedule("0 0 14 * * *", function () {
-	checkNewButNotSignedUp(client, guilds.MAIN);
+	checkNewButNotSignedUp(client, global.config.guilds.MAIN);
 });
 */
 
@@ -322,7 +326,7 @@ async function logcommand(interaction) {
 			path: '/m2mapi/logCommand',
 			method: 'POST',
 			headers: {
-				'X-API-KEY': global.config.for_api_key 
+				'X-API-KEY': global.config.for_api_key
 			}
 		};
 
@@ -332,7 +336,7 @@ async function logcommand(interaction) {
 			userid: interaction.user.id
 		});
 
-		const req = https.request(options, (res) => {});
+		const req = https.request(options, (res) => { });
 		req.write(postData);
 		req.end();
 
@@ -343,8 +347,6 @@ async function logcommand(interaction) {
 
 };
 
-
-//client.on("debug", console.log);
 client.login(global.config.token);
 
 
@@ -515,8 +517,8 @@ app.post('/api/addrole', async (req, res) => {
 
 				if (guild.id === global.config.guilds.MAIN) {
 					// Remove the role from the new member
-					if (member.roles.cache.has(main_no_role)) {
-						await member.roles.remove(main_no_role).catch(console.error);
+					if (member.roles.cache.has(global.main_no_role)) {
+						await member.roles.remove(global.main_no_role).catch(console.error);
 					}
 				}
 
@@ -633,7 +635,7 @@ app.post('/api/swapusers', async (req, res) => {
 	try {
 		//console.log(req.body);
 		let post = req.body;
-		let output = await swap_users(client, client, post.server, post.channel, post.thread_a, post.user_a, post.thread_b, post.user_b, post.message, post.staffroleid);
+		let output = await swap_users(client, post.server, post.channel, post.thread_a, post.user_a, post.thread_b, post.user_b, post.message, post.staffroleid);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {

@@ -361,9 +361,9 @@ async function updateEventChannelIds() {
                     chatChannelIds.push(event.mainchannel);
                 }
             });
-		}).on("error", (err) => {
-			console.error("Error fetching calendar data: " + err.message);
-		});
+        }).on("error", (err) => {
+            console.error("Error fetching calendar data: " + err.message);
+        });
 
 
     } catch (error) {
@@ -541,26 +541,26 @@ async function pingwaitlist(client, thread) {
 
             if (mentionroles.length > 0) {
 
-            const message = `Attention ${mention} there is probably an open spot in ${group.name} starting in <t:${date.getTime() / 1000}:R>\n\nFirst come first serve, click this button to join this group!`;
+                const message = `Attention ${mention} there is probably an open spot in ${group.name} starting in <t:${date.getTime() / 1000}:R>\n\nFirst come first serve, click this button to join this group!`;
 
-            const btn1 = new ButtonBuilder()
-                .setCustomId('joingroupfromwaitlist')
-                .setLabel('Join group')
-                .setStyle(ButtonStyle.Success);
-            const channel = await guild.channels.fetch(group.helpchannel);
-            let components = [];
-            const row = new ActionRowBuilder().addComponents(btn1);
-            components.push(row);
+                const btn1 = new ButtonBuilder()
+                    .setCustomId('joingroupfromwaitlist')
+                    .setLabel('Join group')
+                    .setStyle(ButtonStyle.Success);
+                const channel = await guild.channels.fetch(group.helpchannel);
+                let components = [];
+                const row = new ActionRowBuilder().addComponents(btn1);
+                components.push(row);
 
-            const pingmessageid = await channel.send({ content: message, components: components, allowedMentions: { roles: mentionroles, repliedUser: false } });
+                const pingmessageid = await channel.send({ content: message, components: components, allowedMentions: { roles: mentionroles, repliedUser: false } });
 
-            sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `waitlistpinged` = NOW(), `pingmessageid` = " + pingmessageid + " WHERE `id` = " + group.id + "";
-            const result2 = await new Promise((resolve, reject) => {
-                con.query(sql, function (err, result) {
-                    if (err) reject(err);
-                    resolve(result);
+                sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `waitlistpinged` = NOW(), `pingmessageid` = " + pingmessageid + " WHERE `id` = " + group.id + "";
+                const result2 = await new Promise((resolve, reject) => {
+                    con.query(sql, function (err, result) {
+                        if (err) reject(err);
+                        resolve(result);
+                    });
                 });
-            });
             }
         }
         con.end();
@@ -571,8 +571,6 @@ async function pingwaitlist(client, thread) {
 
 
 async function signupHandler(message, client) {
-
-    const main_no_role = '1414643032002920468';
 
     try {
 
@@ -809,10 +807,10 @@ async function signupHandler(message, client) {
                                         if (participantrole) {
                                             await member.roles.add(participantrole);
 
-                                            if (guild.id == guilds.MAIN) {
+                                            if (guild.id == global.config.guilds.MAIN) {
                                                 // Remove specific role from MAIN if they have it
-                                                if (member.roles.cache.has(main_no_role)) {
-                                                    await member.roles.remove(main_no_role);
+                                                if (member.roles.cache.has(global.main_no_role)) {
+                                                    await member.roles.remove(global.main_no_role);
                                                 }
                                             }
 
