@@ -8,7 +8,7 @@ function consoleLog(message) {
 }
 
 async function interactionReply(interaction, content, flags = undefined, options = {}) {
-  consoleLog(`Replying to interaction with content: ${content}`);
+  //consoleLog(`Replying to interaction with content: ${content}`);
   if (flags === undefined) {
     flags = MessageFlags.Ephemeral
   }
