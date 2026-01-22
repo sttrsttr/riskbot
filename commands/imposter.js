@@ -70,13 +70,13 @@ module.exports = {
         .setDescription('The host of the game')
         .setRequired(false)
     )
-    .addStringOption(option =>
+    .addIntegerOption(option =>
       option.setName('imposters')
         .setDescription('How many imposters?')
         .setRequired(false)
         .addChoices(
-          { name: '2 imposters', value: '2' },
-          { name: '1 imposter', value: '1' },
+          { name: '2 imposters', value: 2 },
+          { name: '1 imposter', value: 1 },
         )
     ),
   async execute(interaction) {
