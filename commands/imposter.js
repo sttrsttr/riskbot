@@ -1,258 +1,249 @@
 
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 
-function getRndInteger(min, max) {
-  return Math.floor(Math.random() * (max - min + 1) ) + min;
+function consoleLog(message) {
+  const now = new Date();
+  const isoString = now.toISOString();
+  console.log(`${isoString}: ${message}`);
 }
 
-function shuffleArray(array) {
-    for (var i = array.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
-    }
+async function interactionReply(interaction, content, flags = undefined, options = {}) {
+  consoleLog(`Replying to interaction with content: ${content}`);
+  if (flags === undefined) {
+    flags = MessageFlags.Ephemeral
+  }
+  let args = {
+    content: content,
+    flags: flags,
+    ...options
+  }
+  if (interaction.deferred) {
+    await interaction.followUp(args);
+  } else {
+    await interaction.reply(args);
+  }
 }
 
 module.exports = {
-	data: new SlashCommandBuilder()
-		.setName('imposter')
-		.setDescription('Assign imposter role among specified users')
-		.addStringOption(option =>
-			option.setName('imposters')
-				.setDescription('How many imposters?')
-				.setRequired(true)
-				.addChoices(
-					{ name: '2', value: '2' },
-					{ name: '1', value: '1' },
-					{ name: 'invalid(0)', value: '0' },
-					{ name: 'invalid(2)', value: '-1' },
-				)
-			)	
-		.addUserOption(option =>
-			option
-			.setName('user1')
-			.setDescription('user1')
-			.setRequired(true)
-		)
-		.addUserOption(option =>
-			option
-			.setName('user2')
-			.setDescription('user2')
-			.setRequired(true)
-		)
-		.addUserOption(option =>
-			option
-			.setName('user3')
-			.setDescription('user3')
-			.setRequired(true)
-		)
-		.addUserOption(option =>
-			option
-			.setName('user4')
-			.setDescription('user4')
-			.setRequired(false)
-		)
-		.addUserOption(option =>
-			option
-			.setName('user5')
-			.setDescription('user5')
-			.setRequired(false)
-		)
-		.addUserOption(option =>
-			option
-			.setName('user6')
-			.setDescription('user6')
-			.setRequired(false)
-		)
-		,
-		async execute(interaction) {
-
-			const interactionUser = await interaction.guild.members.fetch(interaction.user.id);
-
-
-			let errors = "Imposter assignment executed.";
-			let users = [];
-			let targets = [];
-
-			const impostercount = parseInt(interaction.options.getString('imposters')) ?? 2;
-			const user1 = interaction.options.getMember('user1');
-			const user2 = interaction.options.getMember('user2');
-			const user3 = interaction.options.getMember('user3');
-			const user4 = interaction.options.getMember('user4');
-			const user5 = interaction.options.getMember('user5');
-			const user6 = interaction.options.getMember('user6');
-
-			let dmtargets = "";
-
-			if (user1) {
-				users.push(user1);
-				targets.push(user1);
-				let name = user1.user.globalName || user1.user.username || user1.displayName || user1.user.nickname;
-				dmtargets = dmtargets + name + "\n";	
-			}
-			if (user2) {
-				if (user2.user.username) {
-					if (!targets.includes(user2)) {
-						users.push(user2);
-						targets.push(user2);
-						let name = user2.user.globalName || user2.user.username || user2.displayName || user2.user.nickname;
-						dmtargets = dmtargets + name + "\n";	
-		
-					};
-				}
-			}
-			if (user3) {
-				if (user3.user.username) {
-					if (!targets.includes(user3)) {
-						users.push(user3);
-						targets.push(user3);
-						let name = user3.user.globalName || user3.user.username || user3.displayName || user3.user.nickname;
-						dmtargets = dmtargets + name + "\n";	
-					};
-				}
-			}
-			if (user4) {
-				if (user4.user.username) {
-					if (!targets.includes(user4)) {
-						users.push(user4);
-						targets.push(user4);
-						let name = user4.user.globalName || user4.user.username || user4.displayName || user4.user.nickname;
-						dmtargets = dmtargets + name + "\n";	
-					};
-				}
-			}
-			if (user5) {
-				if (user5.user.username) {
-					if (!targets.includes(user5)) {
-						users.push(user5);
-						targets.push(user5);
-						let name = user5.user.globalName || user5.displayName || user5.user.username || user5.user.nickname;
-						dmtargets = dmtargets + name + "\n";	
-					};
-				}
-			}
-			if (user6) {
-				if (user6.user.username) {
-					if (!targets.includes(user6)) {
-						users.push(user6);
-						targets.push(user6);
-						let name = user6.user.globalName || user6.user.username || user6.displayName || user6.user.nickname;
-						dmtargets = dmtargets + name + "\n";
-					};
-				}
-			}
-
-
-			await interaction.reply({ content: "I am on it... I will send the imposters some information in DM:\n"+ dmtargets, flags: 64 });
-
-			if (users.length > impostercount) {
-
-				if (impostercount == -1 && users.length == 6) {
-
-					// Team the players into 3 teams of 2
-					let imposter1 = Math.floor(Math.random()*users.length);
-					let imposter2 = Math.floor(Math.random()*users.length);
-					let imposter3 = Math.floor(Math.random()*users.length);
-					while (imposter1 == imposter2 || imposter1 == imposter3 || imposter2 == imposter3) {
-						imposter2 = Math.floor(Math.random()*users.length);
-						imposter3 = Math.floor(Math.random()*users.length);
-					}
-
-					// Find a random teammate for each imposter
-					let teammate1 = Math.floor(Math.random()*users.length);
-					let teammate2 = Math.floor(Math.random()*users.length);
-					let teammate3 = Math.floor(Math.random()*users.length);
-					while (teammate1 == imposter1 || teammate1 == imposter2 || teammate1 == imposter3 || teammate1 == teammate2 || teammate1 == teammate3) {
-						teammate1 = Math.floor(Math.random()*users.length);
-					}
-					while (teammate2 == imposter1 || teammate2 == imposter2 || teammate2 == imposter3 || teammate2 == teammate1 || teammate2 == teammate3) {
-						teammate2 = Math.floor(Math.random()*users.length);
-					}
-					while (teammate3 == imposter1 || teammate3 == imposter2 || teammate3 == imposter3 || teammate3 == teammate1 || teammate3 == teammate2) {
-						teammate3 = Math.floor(Math.random()*users.length);
-					}
-
-					// Message each player their teammate and role
-					let imposter1_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${users[teammate1].user.globalName || users[teammate1].user.username || users[teammate1].displayName || users[teammate1].user.nickname} have been chosen to be the imposters for the upcoming game. Good luck!`;
-					let imposter2_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${users[teammate2].user.globalName || users[teammate2].user.username || users[teammate2].displayName || users[teammate2].user.nickname} have been chosen to be the imposters for the upcoming game. Good luck!`;
-					let imposter3_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${users[teammate3].user.globalName || users[teammate3].user.username || users[teammate3].displayName || users[teammate3].user.nickname} have been chosen to be the imposters	for the upcoming game. Good luck!`;	
-					let teammate1_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${users[imposter1].user.globalName || users[imposter1].user.username || users[imposter1].displayName || users[imposter1].user.nickname} have been chosen to be the imposters	for the upcoming game. Good luck!`;
-					let teammate2_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${users[imposter2].user.globalName || users[imposter2].user.username || users[imposter2].displayName || users[imposter2].user.nickname} have been chosen to be the imposters	for the upcoming game. Good luck!`;
-					let teammate3_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${users[imposter3].user.globalName || users[imposter3].user.username || users[imposter3].displayName || users[imposter3].user.nickname} have been chosen to be the imposters	for the upcoming game. Good luck!`;
-
-					try {
-						await users[imposter1].send(imposter1_msg).catch(() => errors = errors + `\n${users[imposter1]} does not accept DMs. Unable to tell them they are imposters`);
-						await users[imposter2].send(imposter2_msg).catch(() => errors = errors + `\n${users[imposter2]} does not accept DMs. Unable to tell them they are imposters`);
-						await users[imposter3].send(imposter3_msg).catch(() => errors = errors + `\n${users[imposter3]} does not accept DMs. Unable to tell them they are imposters`);
-						await users[teammate1].send(teammate1_msg).catch(() => errors = errors + `\n${users[teammate1]} does not accept DMs. Unable to tell them their target :(`);
-						await users[teammate2].send(teammate2_msg).catch(() => errors = errors + `\n${users[teammate2]} does not accept DMs. Unable to tell them their target :(`);
-						await users[teammate3].send(teammate3_msg).catch(() => errors = errors + `\n${users[teammate3]} does not accept DMs. Unable to tell them their target :(`);
-
-					} catch (error) {
-						console.error(error);
-						await interaction.followUp({ content: "Error running command, please try again later", flags: 64 });
-					}
-
-				} else {
-
-					if (impostercount == -1) {
-						impostercount = 2;
-					}
-
-					let imposter1 = Math.floor(Math.random()*users.length);
-					let imposter2 = Math.floor(Math.random()*users.length);
-
-				while (imposter1 == imposter2) {
-					imposter2 = Math.floor(Math.random()*users.length);
-				}
-				let imposter2_name;
-				let imposter2_msg;
-
-				let imposter1_name = users[imposter1].user.globalName || users[imposter1].user.username || users[imposter1].displayName || users[imposter1].user.nickname;
-				let imposter1_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU have been chosen to be the imposter for the upcoming game. Good luck!`;
-
-				imposter2_name = users[imposter2].user.globalName || users[imposter2].user.username || users[imposter2].displayName || users[imposter2].user.nickname;
-				imposter1_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${imposter2_name} have been chosen to be the imposter for the upcoming game. Good luck!`;
-				imposter2_msg = `On behalf of ${interactionUser.displayName} I am happy to inform that YOU and ${imposter1_name} have been chosen to be the imposters for the upcoming game. Good luck!`;
-
-
-					try {
-
-
-
-						if (impostercount > 0) {
-							await users[imposter1].send(imposter1_msg).catch(() => errors = errors + `\n${users[imposter1]} does not accept DMs. Unable to tell them they are imposters`);
-						} else {
-							imposter1 = -1;
-							imposter2 = -1;
-						}
-						if (impostercount > 1) {
-							await users[imposter2].send(imposter2_msg).catch(() => errors = errors + `\n${users[imposter2]} does not accept DMs. Unable to tell them they are imposters`);
-						} else {
-							imposter2 = -1;
-						}
-		
-						for (i = 0; i < users.length; i++) {
-							if (i != imposter1 && i != imposter2) {
-								await users[i].send(`On behalf of ${interactionUser.displayName} I am happy to inform that YOU are NOT an imposter for the upcoming game. Good luck!`).catch(() => errors = errors + `\n${users[i].user.nickname} does not accept DMs. Unable to tell them their target :(`);
-							}
-						}
-					
-					} catch (error) {
-						console.error(error);
-						await interaction.followUp({ content: "Error running command, please try again later", flags: 64 });
-					}
-
-
-				}
-
-
-
-			} else {
-				errors = errors + '\n\nERROR: Not enough unique users identified, unable to assign imposters';
-			}
-
-			await interaction.followUp({ content: errors, flags: 64 });
-		}
+  data: new SlashCommandBuilder()
+    .setName('imposter')
+    .setDescription('Assign imposter role among specified users')
+    .addUserOption(option =>
+      option
+        .setName('user1')
+        .setDescription('user1')
+        .setRequired(true)
+    )
+    .addUserOption(option =>
+      option
+        .setName('user2')
+        .setDescription('user2')
+        .setRequired(true)
+    )
+    .addUserOption(option =>
+      option
+        .setName('user3')
+        .setDescription('user3')
+        .setRequired(true)
+    )
+    .addUserOption(option =>
+      option
+        .setName('user4')
+        .setDescription('user4')
+        .setRequired(false)
+    )
+    .addUserOption(option =>
+      option
+        .setName('user5')
+        .setDescription('user5')
+        .setRequired(false)
+    )
+    .addUserOption(option =>
+      option
+        .setName('user6')
+        .setDescription('user6')
+        .setRequired(false)
+    )
+    .addUserOption(option =>
+      option
+        .setName('host')
+        .setDescription('The host of the game')
+        .setRequired(false)
+    )
+    .addStringOption(option =>
+      option.setName('imposters')
+        .setDescription('How many imposters?')
+        .setRequired(false)
+        .addChoices(
+          { name: '2 imposters', value: '2' },
+          { name: '1 imposter', value: '1' },
+        )
+    ),
+  async execute(interaction) {
+    const author = interaction.user;
+    //consoleLog(`Imposter command invoked by ${author.username} in guild ${interaction.guildId}`);
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const host = interaction.options.getUser("host");
+    const cantBendRules = (author.id != "415848204136087563"); // Lany can bend rules a bit.Added only for testing purposes
+    const imposterCount = interaction.options.getInteger("imposters") ?? 2;
+    let users = [];
+    let userIds = [];
+    for (let i = 1; i <= 6; i++) {
+      const user = interaction.options.getUser(`user${i}`);
+      if (null === user) {
+        continue;
+      }
+      if (user.bot && cantBendRules) {
+        await interactionReply(interaction, `You cannot specify a bot as a player!`);
+        return;
+      }
+      if (host && user.id === host.id && cantBendRules) {
+        await interactionReply(interaction, `You cannot specify the host as a player!`);
+        return;
+      }
+      if (userIds.includes(user.id) && cantBendRules) {
+        await interactionReply(interaction, `You cannot specify the same user multiple times!`);
+        return;
+      }
+      users.push(user);
+      userIds.push(user.id);
+    }
+    if (users.length <= imposterCount) {
+      await interactionReply(interaction, `Not enough unique users identified, unable to assign imposters`);
+      return;
+    }
+    const userCount = users.length;
+    const imposter1 = Math.floor(Math.random() * users.length);
+    let imposter2;
+    if (imposterCount === 2) {
+      do {
+        imposter2 = Math.floor(Math.random() * users.length);
+      } while (imposter1 === imposter2);
+    }
+    const isSolo = imposter2 === undefined;
+    let userSettings = [];
+    for (let i = 0; i < users.length; i++) {
+      let isImposter = i === imposter1 || i === imposter2;
+      userSettings.push({
+        user: users[i],
+        role: isImposter ? "Imposter" : "Crewmate",
+        isImposter: isImposter
+      });
+    }
+    const hostString = host ? `${host.username}` : "No host";
+    if (host) {
+      let fields = [
+        {
+          name: "Game Creator",
+          value: `${author.username}`,
+          inline: true,
+        },
+        {
+          name: "Host",
+          value: hostString,
+          inline: true,
+        },
+        {
+          name: "Player Count",
+          value: `${userCount}`,
+          inline: true,
+        },
+        {
+          name: "Imposter Count",
+          value: `${imposterCount}`,
+          inline: true,
+        }
+      ];
+      let fields2 = [];
+      for (let i = 0; i < users.length; i++) {
+        const user = users[i];
+        const userSetting = userSettings[i];
+        fields2.push({
+          name: `${user.username}`,
+          value: `${userSetting.role}`,
+          inline: true,
+        });
+      }
+      let embeds = [
+        {
+          title: `Rigged Caps Game`,
+          description: `You are the host for this game.`,
+          fields: fields,
+          timestamp: new Date().toISOString(),
+        },
+        {
+          title: `Players`,
+          fields: fields2,
+        },
+      ];
+      try {
+        await host.send({
+          content: "Rigged Caps Game Started.",
+          embeds: embeds,
+        });
+      } catch (err) {
+        const responseMessage = err.code === 50007 ?
+          `Could not send DM to host! Host must enable DMs from server members and try again.` :
+          `Error sending DM to host! ${err.message}`;
+        //consoleLog(responseMessage);
+        await interactionReply(interaction, responseMessage);
+        return;
+      }
+    }
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i];
+      const userSetting = userSettings[i];
+      let fields = [
+        {
+          name: "Game Creator",
+          value: `${author.username}`,
+          inline: true,
+        },
+        {
+          name: "Host",
+          value: hostString,
+          inline: true,
+        },
+        {
+          name: "Role",
+          value: userSetting.role,
+          inline: true,
+        },
+      ];
+      if (userSetting.isImposter && !isSolo) {
+        const teamMate = i === imposter1 ? users[imposter2] : users[imposter1];
+        fields.push({
+          name: "Teammate",
+          value: `${teamMate.username}`,
+          inline: true,
+        });
+      }
+      let embed = {
+        title: `Rigged Caps Game`,
+        description: `You have been assigned a role of **${userSetting.role}**.`,
+        fields: fields,
+        timestamp: new Date().toISOString(),
+      };
+      try {
+        await user.send({
+          content: "Rigged Caps Game Started.",
+          embeds: [embed],
+        });
+      } catch (err) {
+        const errorRecipient = host ? host : interaction.user;
+        const responseMessage = err.code === 50007 ?
+          `Could not send DM to ${user.username}! They must enable DMs from server members and try again.` :
+          `Error sending DM to ${user.username}! ${err.message}`;
+        //consoleLog(responseMessage);
+        try {
+          await errorRecipient.send(responseMessage);
+        } catch (err2) {
+            //consoleLog(`Also could not send error message to host/author. ${err2.message}`);
+            interactionReply(interaction, `Error sending DM to ${user.username}, and could not notify the host/author!\n${err.message}\n${err2.message}`);
+            return;
+        }
+      }
+    }
+    await interactionReply(interaction, `The Rigged Caps game has been started!`);
+  }
 };
