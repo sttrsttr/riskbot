@@ -84,7 +84,7 @@ module.exports = {
     //consoleLog(`Imposter command invoked by ${author.username} in guild ${interaction.guildId}`);
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const host = interaction.options.getUser("host");
-    const cantBendRules = (author.id != "415848204136087563"); // Lany can bend rules a bit.Added only for testing purposes
+    const cantBendRules = true; //(author.id != "415848204136087563"); // Lany can bend rules a bit.Added only for testing purposes
     const imposterCount = interaction.options.getInteger("imposters") ?? 2;
     let users = [];
     let userIds = [];
