@@ -4,279 +4,15 @@ const path = require('path');
 const https = require('https');
 
 const { AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
-
-// Array of inspirational quotes for players
-const inspirationalQuotes = [
-    "Success is no accident. It's hard work, perseverance, learning, studying, sacrifice, and most of all, love for what you're doing.",
-    "Champions keep playing until they get it right.",
-    "You miss 100% of the shots you don't take.",
-    "Believe you can, and you're halfway there.",
-    "It's not whether you get knocked down, it's whether you get up.",
-    "Winning isn't everything, but wanting to win is.",
-    "Don't watch the clock; do what it does. Keep going.",
-    "The harder the battle, the sweeter the victory.",
-    "Success is where preparation and opportunity meet.",
-    "Push yourself, because no one else is going to do it for you.",
-    "Great things never come from comfort zones.",
-    "Hard work beats talent when talent doesn't work hard.",
-    "Believe in yourself and all that you are.",
-    "Difficult roads often lead to beautiful destinations.",
-    "Don't limit your challenges. Challenge your limits.",
-    "Today's accomplishments were yesterday's impossibilities.",
-    "The difference between ordinary and extraordinary is that little extra.",
-    "You are stronger than you think.",
-    "Pain is temporary. Victory is forever.",
-    "Don't stop when you're tired. Stop when you're done.",
-    "The only place success comes before work is in the dictionary.",
-    "You didn't come this far to only come this far.",
-    "The only limit to our realization of tomorrow is our doubts of today.",
-    "Do something today that your future self will thank you for.",
-    "Your mind is a powerful thing. When you fill it with positive thoughts, your life will start to change.",
-    "Stay patient and trust your journey.",
-    "Dream it. Believe it. Build it.",
-    "Success is not final, failure is not fatal: It is the courage to continue that counts.",
-    "Make each day your masterpiece.",
-    "The road to success and the road to failure are almost exactly the same.",
-    "You never know how strong you are until being strong is your only choice.",
-    "Success is not measured by what you accomplish, but by the opposition you have encountered.",
-    "A goal is not always meant to be reached; it often serves simply as something to aim at.",
-    "It always seems impossible until it's done.",
-    "Don't let yesterday take up too much of today.",
-    "Winners never quit, and quitters never win.",
-    "Fall seven times, stand up eight.",
-    "In the middle of every difficulty lies opportunity.",
-    "The more difficult the victory, the greater the happiness in winning.",
-    "Perseverance is not a long race; it is many short races one after the other.",
-    "There are no shortcuts to any place worth going.",
-    "The key to success is to focus on goals, not obstacles.",
-    "If it doesn't challenge you, it won't change you.",
-    "Don't count the days, make the days count.",
-    "Focus on the process, and the results will follow.",
-    "Start where you are. Use what you have. Do what you can.",
-    "Be stronger than your excuses.",
-    "Dream big. Work hard. Stay focused.",
-    "Your only limit is you.",
-    "Patience is not the ability to wait, but the ability to keep a good attitude while waiting.",
-    "The two most powerful warriors are patience and time.",
-    "All things are difficult before they become easy.",
-    "Patience is bitter, but its fruit is sweet.",
-    "Patience is not passive; on the contrary, it is active; it is concentrated strength.",
-    "Good things come to those who wait.",
-    "The best things in life are worth waiting for.",
-    "One moment of patience may ward off great disaster. One moment of impatience may ruin a whole life.",
-    "Be patient. Everything is coming together.",
-    "To lose patience is to lose the battle.",
-    "Patience is the companion of wisdom.",
-    "Adopt the pace of nature: her secret is patience.",
-    "The key to everything is patience. You get the chicken by hatching the egg, not by smashing it.",
-    "Patience is the calm acceptance that things can happen in a different order than the one you have in mind.",
-    "Sometimes things aren't clear right away. That's where you need to be patient and persevere.",
-    "Rivers know this: there is no hurry. We shall get there someday.",
-    "Patience, persistence, and perspiration make an unbeatable combination for success.",
-    "The more you know yourself, the more patience you have for what you see in others.",
-    "Patience and fortitude conquer all things.",
-    "The trees that are slow to grow bear the best fruit.",
-    "Have patience. All things are difficult before they become easy.",
-    "Patience is a form of action.",
-    "Great works are performed not by strength but by perseverance.",
-    "He that can have patience can have what he will.",
-    "Patience is the art of hoping.",
-    "Patience is the key to paradise.",
-    "Patience is not simply the ability to wait - it's how we behave while we're waiting.",
-    "Endurance is nobler than strength, and patience than beauty.",
-    "The very important thing you should have is patience.",
-    "With patience, even the mulberry leaf becomes a silk gown.",
-    "Learning patience can be a difficult experience, but once conquered, you will find life is easier.",
-    "Patience is a conquering virtue.",
-    "Have patience with all things, but first of all with yourself.",
-    "Patience and diligence, like faith, remove mountains.",
-    "Patience is the key to joy.",
-    "Patience is the road to wisdom.",
-    "All great achievements require time.",
-    "Patience is the ability to idle your motor when you feel like stripping your gears.",
-    "Patience is a key element of success.",
-    "Patience, persistence, and perspiration make an unbeatable combination for success.",
-    "If you have patience, you'll see that things will unfold as they should.",
-    "Patience is necessary, and one cannot reap immediately where one has sown.",
-    "The more patient you are, the more peaceful you become.",
-    "The strongest of all warriors are these two — time and patience.",
-    "Patience is the secret to good food and good friends.",
-    "Time is the wisest counselor of all.",
-    "Luck is what happens when preparation meets opportunity.",
-    "The harder you work, the luckier you get.",
-    "Create your own luck by putting yourself in situations where opportunities are more likely to arise.",
-    "Success is simply a matter of hanging on after others have let go.",
-    "Stay open to new experiences and meet new people - luck often comes from unexpected connections.",
-    "Take more risks. You increase your chances of being lucky by stepping out of your comfort zone.",
-    "Luck favors the bold. Be courageous in pursuing your goals.",
-    "Seize every opportunity, no matter how small, because you never know where it will lead.",
-    "Be positive and optimistic. A good attitude attracts opportunities.",
-    "Pay attention to the small things. Sometimes luck comes from noticing details others overlook.",
-    "Trust your instincts. Sometimes gut feelings lead you to lucky opportunities.",
-    "Build relationships. People around you often bring luck in the form of guidance, support, or new opportunities.",
-    "Develop resilience. Luck favors those who persist even after failures.",
-    "Take action. Luck comes to those who act, not those who wait.",
-    "Say 'yes' more often. Every 'yes' is a new chance for something lucky to happen.",
-    "Be adaptable. Sometimes luck means being able to pivot when new opportunities arise.",
-    "Believe in yourself. Confidence attracts luck by opening doors you didn't even see before.",
-    "Focus on progress, not perfection. Sometimes the process of moving forward brings unexpected luck.",
-    "Stay curious. The more you learn and explore, the more chances for lucky breaks.",
-    "Maintain a growth mindset. See challenges as opportunities for luck and success to follow.",
-    "Don't rely on luck alone - make your own destiny through hard work and persistence.",
-    "Take calculated risks. Fortune often rewards those who are willing to take chances.",
-    "Be grateful for what you have. Gratitude opens doors to more positive experiences, including luck.",
-    "Put yourself in the right place at the right time by being active and engaged in your field.",
-    "Create opportunities for others. Helping people often brings good fortune in return.",
-    "Take small, consistent steps toward your goals. Luck often comes from steady progress over time.",
-    "Keep an open mind. Sometimes luck comes in forms you weren't expecting.",
-    "Set clear goals and pursue them relentlessly. Luck often finds people who know where they're headed.",
-    "Be persistent. The longer you stick with something, the more likely a lucky break will come your way.",
-    "Be flexible. Sometimes luck comes from embracing change rather than resisting it.",
-    "Surround yourself with positive and motivated people - luck often comes through good relationships.",
-    "Learn from your mistakes. What seems like bad luck now can turn into good fortune later.",
-    "Keep your eyes open. Luck often comes from noticing opportunities that others miss.",
-    "Take initiative. Luck often favors those who make the first move.",
-    "Stay prepared. Luck can knock at your door anytime, but you need to be ready to take advantage of it.",
-    "Listen carefully to others. Sometimes luck comes from advice or ideas given by those around you.",
-    "Be humble. Luck is often a mix of hard work, timing, and help from others.",
-    "Focus on creating value for others. The more you give, the more luck seems to find its way back to you.",
-    "Stay resilient in the face of adversity. What seems like bad luck now could turn into a blessing in disguise.",
-    "Break your routine. Sometimes stepping away from the ordinary creates new opportunities for luck.",
-    "Network with purpose. The more people you know, the more chances for luck to strike.",
-    "Always be learning. Knowledge opens up more opportunities for luck.",
-    "Be proactive. Take the lead in your life, and luck will often follow.",
-    "Keep your goals clear but remain open to new paths - luck sometimes comes from detours.",
-    "Look for the silver lining in difficult situations. Even challenges can bring luck with the right mindset.",
-    "Trust the process. Luck often follows those who stay patient and consistent in their efforts.",
-    "Be enthusiastic. Passion for what you do attracts opportunities and luck in surprising ways."
-];
-
-
-
-
-// Array of welcome messages
-const welcomeMessages = [
-    "Welcome to the tournament, let the games begin!",
-    "Ready to conquer the competition? Good luck!",
-    "May the best player win!",
-    "I hope you roll 6's all day!",
-    "Try to get a trade on 4 this time!",
-    "I hope we get to play some day!",
-    "It's game time! Show us what you've got!",
-    "Best of luck in the tournament!",
-    "Let the battles commence!",
-    "Get ready to play and have fun!",
-    "Wishing you success in every game!",
-    "Play hard and play fair!",
-    "Welcome to the arena, warrior!",
-    "Victory is just a game away!",
-    "Let's make this tournament unforgettable!",
-    "Go for the gold!",
-    "May your skills shine through!",
-    "Ready, set, game on!",
-    "Welcome, competitor! Show your prowess!",
-    "Here's to a great tournament experience!",
-    "Bring your A-game and enjoy!",
-    "Good luck, and may the odds be ever in your favor!",
-    "Play with passion and determination!",
-    "Welcome to the challenge!",
-    "Let's see who comes out on top!",
-    "Time to showcase your talent!",
-    "Enjoy the games and give it your all!",
-    "Welcome to the battlefield!",
-    "Make every move count!",
-    "Wishing you an epic tournament!",
-    "May your strategies lead you to victory!",
-    "Ready to claim your spot at the top?",
-    "Play smart, play bold!",
-    "Welcome to the ultimate gaming showdown!",
-    "Let's have a tournament to remember!",
-    "Compete with heart and spirit!",
-    "Best wishes for an amazing tournament!",
-    "Welcome to the competition, game on!",
-    "May your reflexes be sharp and your aim true!",
-    "The tournament awaits your skill!",
-    "Play with confidence and grace!",
-    "Here's to a fair and fun tournament!",
-    "Show us what you're made of!",
-    "Bring your best game and enjoy the journey!",
-    "Welcome to the quest for victory!",
-    "Let your gaming skills shine!",
-    "Wishing you thrilling matches ahead!",
-    "Ready to face the challenge?",
-    "May your games be epic and victories sweet!",
-    "Welcome to the ultimate test of skill!",
-    "Good luck, and may the best player win!",
-    "Get ready for an action-packed tournament!",
-    "Welcome, and let's make this tournament legendary!",
-    "Let's see some great sportsmanship out there!",
-    "Welcome to the competition, player!",
-    "Show your skill and strategy!",
-    "The tournament awaits your greatness!",
-    "May your efforts be rewarded!",
-    "Welcome to a world of challenges!",
-    "Get set for an exciting ride!",
-    "Wishing you great success in the games!",
-    "It's your time to shine!",
-    "Welcome to the ultimate challenge!",
-    "Unleash your potential!",
-    "Show your competitive spirit!",
-    "May you achieve your dreams!",
-    "Let the games inspire you!",
-    "Your journey to glory starts now!",
-    "Prepare for epic battles!",
-    "Welcome to the realm of champions!",
-    "May your tactics be flawless!",
-    "Victory is within your reach!",
-    "Ready to make your mark?",
-    "Show your true power!",
-    "Let's make history together!",
-    "Welcome to the gaming elite!",
-    "Your adventure begins now!",
-    "Play with honor and pride!",
-    "Reach for the stars!",
-    "Ready to break records?",
-    "Let's create unforgettable moments!",
-    "Welcome to the challenge of a lifetime!",
-    "May you play with brilliance!",
-    "The stage is set for greatness!",
-    "Get ready to dominate!",
-    "Rise to the occasion!",
-    "Welcome to the fight for glory!",
-    "The competition is fierce!",
-    "Make every moment count!",
-    "Let's see some amazing gameplay!",
-    "Welcome to the test of champions!",
-    "Victory favors the brave!",
-    "Compete with courage and skill!",
-    "It's your time to conquer!",
-    "Welcome to the game of legends!",
-    "The thrill of victory awaits!",
-    "Aim high and play hard!",
-    "Prepare for an epic journey!",
-    "Welcome to the arena of champions!",
-    "May your path be victorious!",
-    "Bring your best game!",
-    "I hope you get good dice",
-    "I hope you get sets on 3 every time",
-    "No australia no win!",
-    "Let's witness some great talent!",
-    "Welcome to the ultimate quest!",
-    "Your destiny awaits!",
-    "Play with all your heart!",
-    "May fortune favor you!",
-    "Show us your mastery!",
-    "Welcome to the game of champions!",
-    "The challenge is yours to take!",
-    "Make your mark in history!"
-];
+const { httpsPostRequest, httpsGetRequest } = require('./helperfunctions.js');
+const inspirationalQuotes = JSON.parse(fs.readFileSync(path.join(__dirname, 'inspirationalQuotes.json'), 'utf8'));
+const welcomeMessages = JSON.parse(fs.readFileSync(path.join(__dirname, 'welcomeMessages.json'), 'utf8'));
 
 // Function to get a random welcome message
 function getRandomWelcomeMessage() {
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
     return inspirationalQuotes[randomIndex];
 }
-
 
 // Function to get a random welcome message
 function getRandomQuote() {
@@ -294,6 +30,7 @@ let allowedChannelIds = [];
 let chatChannelIds = [];
 let announcementChannelsIds = [];
 
+// API function for swapping users after everything else is handled backend wise
 async function swap_users(client, tserver, tchannel, tthread_a, tuser_a, tthread_b, tuser_b, tmessage, staffroleid) {
 
     try {
@@ -378,55 +115,64 @@ async function pingparticipants(message, client) {
 
     try {
 
-        // Connect to SQL database
-        var con = mysql.createConnection({
-            host: global.config.mysql_host,
-            user: global.config.mysql_username,
-            password: global.config.mysql_password,
-            supportBigNumbers: true,
-            bigNumberStrings: true
-        });
-        con.connect(function (err) {
-            if (err) throw err;
+        const options1 = {
+            hostname: 'friendsofrisk.com',
+            path: '/openapi/getChannelPingLog',
+            method: 'POST',
+        };
+
+        const postData1 = JSON.stringify({
+            channelid: message.channel.id,
+            command: 'pingparticipants'
         });
 
+        const res1 = await httpsPostRequest(options1, postData1);
 
-        let sql = "SELECT 1 FROM `" + global.config.mysql_database + "`.`eventmanager__pinglog` WHERE `channelid` = " + message.channel.id + " AND `command` = 'pingparticipants' AND `validfrom` > DATE_ADD(NOW(), INTERVAL -1 HOUR)";
-        const history = await new Promise((resolve, reject) => {
-            con.query(sql, function (err, result) {
-                if (err) reject(err);
-                resolve(result);
-            });
-        });
+        const history = JSON.parse(res1);
         if (history.length == 0) {
 
-            sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__events` WHERE `mainchannel` = " + message.channel.id + "";
-            const events = await new Promise((resolve, reject) => {
-                con.query(sql, function (err, result) {
-                    if (err) reject(err);
-                    resolve(result);
-                });
+            const options2 = {
+                hostname: 'friendsofrisk.com',
+                path: '/openapi/getEvent',
+                method: 'POST',
+            };
+
+            const postData2 = JSON.stringify({
+                mainchannelid: message.channel.id
             });
+
+            const res2 = await httpsPostRequest(options2, postData2);
+
+            const events = JSON.parse(res2);
             const event = events[0];
+
 
             if (event) {
                 const guild = await client.guilds.resolve(event.serverid);
                 const channel = await guild.channels.fetch(message.channel.id);
                 const role = await guild.roles.fetch(event.participantrole);
 
-                await channel.send({ content: `Attention <@&${role.id}>, please read the message above`, allowedMentions: { roles: [role.id], repliedUser: false } });
+                if (channel && role) {
+                    await channel.send({ content: `Attention <@&${role.id}>, please read the message above`, allowedMentions: { roles: [role.id], repliedUser: false } });
+    
+                    const options3 = {
+                        hostname: 'friendsofrisk.com',
+                        path: '/m2mapi/addChannelPingLog',
+                        method: 'POST',
+                        headers: {
+                            'X-API-KEY': global.config.for_api_key
+                        }
+                    };
 
-                sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__pinglog` VALUES (NULL,NOW()," + message.channel.id + "," + message.author.id + ",'pingparticipants')";
-                const insert = await new Promise((resolve, reject) => {
-                    con.query(sql, function (err, result) {
-                        if (err) reject(err);
-                        resolve(result);
+                    const postData3 = JSON.stringify({
+                        channelid: message.channel.id,
+                        command: 'pingparticipants'
                     });
-                });
-            }
-        }
 
-        con.end();
+                    await httpsPostRequest(options3, postData3);
+                }
+            }
+        }   
 
     } catch (error) {
         // Handle errors
@@ -696,7 +442,7 @@ async function signupHandler(message, client) {
                             const username = member.nickname || member.user.globalName || member.user.username;
 
                             const guid = uuidv4().toUpperCase();
-                            let sql = "INSERT INTO `" + global.config.mysql_database + "`.`users` VALUES (NULL,'" + username + "','" + member.id + "',NULL,NULL,NULL,NULL,NOW(),NULL,'" + guid + "',DATE_ADD(NOW(), INTERVAL +1 WEEK),NULL,'',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);";
+                            let sql = "INSERT INTO `" + global.config.mysql_database + "`.`users` (`name`, `discordid`, `guid`, `guid_validto`) VALUES ('" + username + "','" + member.id + "','" + guid + "',DATE_ADD(NOW(), INTERVAL +1 WEEK));";
                             try {
                                 const result = await new Promise((resolve, reject) => {
                                     con.query(sql, function (err, result) {
@@ -1900,6 +1646,7 @@ module.exports = {
     updateEventChannelIds,
     eventmanager1hourping,
     eventmanagerlockthreads,
+    updatecheckinmessage,
     lockThread,
     swap_users,
     eventmanager24hourping,
@@ -1911,6 +1658,7 @@ module.exports = {
     eventmanagerCheckinStart,
     eventmanagerCheckinStop,
     signupHandler,
+    addThreadMember,
     availabilityMessage,
     getAllowedChannelIds: () => allowedChannelIds,
     getChatChannelIds: () => chatChannelIds,

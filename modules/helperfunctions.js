@@ -1,4 +1,32 @@
+const https = require('https');
+
 const { Client, Collection, Events, GatewayIntentBits, Partials, ChannelType, AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, GuildOnboardingPrompt } = require('discord.js');
+
+function httpsPostRequest(options, postData) {
+	return new Promise((resolve, reject) => {
+		const req = https.request(options, (res) => {
+			let data = '';
+			res.on('data', chunk => data += chunk);
+			res.on('end', () => resolve(data));
+		});
+		req.on('error', reject);
+		req.write(postData);
+		req.end();
+	});
+}
+
+function httpsGetRequest(options) {
+	return new Promise((resolve, reject) => {
+		const req = https.request(options, (res) => {
+			let data = '';
+			res.on('data', chunk => data += chunk);
+			res.on('end', () => resolve(data));
+		});
+		req.on('error', reject);
+		req.end();
+	});
+}
+
 
 // API functions
 async function add_to_thread(client, serverid, channelid, threadid, userid) {
@@ -484,16 +512,18 @@ async function message_channel(client, msgserver, msgchannel, msg) {
 
 
 module.exports = {
-    add_to_thread,
-    countMemes,
-    emptyRole,
-    fetchRole,
-    deleteRole,
-    deleteChannel,
-    deleteThread,
-    removefromthread,
-    create_thread,
-    createRole,
-    message_thread,
-    message_channel
+	add_to_thread,
+	countMemes,
+	emptyRole,
+	fetchRole,
+	deleteRole,
+	deleteChannel,
+	deleteThread,
+	removefromthread,
+	create_thread,
+	createRole,
+	message_thread,
+	message_channel,
+	httpsPostRequest,
+	httpsGetRequest
 };

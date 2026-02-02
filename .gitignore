@@ -18,3 +18,4 @@ riskbot.log
 .npm/*
 .dotnet/*
 node_modules/*
+*.log

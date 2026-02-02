@@ -116,7 +116,6 @@ client.once(Events.ClientReady, () => {
 	eventmanager48hourping(client);
 	eventmanagerwelcomethreads(client);
 
-	//countMemes(client, global.config.guilds.MAIN, "522892406199156747", "2025-01-20"); // Manual function used to help Trunk count meme votes
 	//checkNewButNotSignedUp(client, global.config.guilds.MAIN);
 
 	// Console log the current node and discord.js version
@@ -190,13 +189,30 @@ client.on('guildMemberAdd', async (member) => {
 
 // Listen for any commands
 client.on(Events.InteractionCreate, async interaction => {
-	if (interaction.isButton()) {
+	if (interaction.isButton() || interaction.isStringSelectMenu()) {
 		console.log(interaction.customId);
 		const handler = buttonHandlers.get(interaction.customId);
 		if (handler) {
-			await handler(interaction);
+			try {
+				await handler(interaction);
+			} catch (error) {
+				if (error.code === 'InteractionAlreadyReplied') {
+					console.error('Interaction already replied:', error);
+					// Optionally send a follow-up if needed
+					if (!interaction.replied && !interaction.deferred) {
+						await interaction.followUp({ content: 'This button was already handled.', flags: 64 });
+					}
+				} else {
+					console.error('Error in button handler:', error);
+					if (!interaction.replied && !interaction.deferred) {
+						await interaction.reply({ content: 'There was an error handling this button.', flags: 64 });
+					}
+				}
+			}
 		} else {
-			// handle unknown button
+			if (!interaction.replied && !interaction.deferred) {
+				await interaction.reply({ content: 'Unknown button.', flags: 64 });
+			}
 		}
 	} else {
 		if (!interaction.isChatInputCommand()) return;
@@ -379,7 +395,7 @@ app.post('/api/updateeventchannelIds', async (req, res) => {
 app.post('/api/countmemes', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await countMemes(client, post.serverid, post.channelid);
+		let output = await countMemes(client, post.serverid, post.channelid, post.startdate);
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {

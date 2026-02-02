@@ -52,7 +52,11 @@ module.exports = async (interaction) => {
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: "Error, please try again later", flags: 64 });
+			if (!interaction.replied && !interaction.deferred) {
+				await interaction.reply({ content: "Error, please try again later", flags: 64 });
+			} else {
+				await interaction.followUp({ content: "There was an error, please try again later", flags: 64 });
+			}
 		}
 
 };
