@@ -22,8 +22,7 @@ for (const file of commandFiles) {
 	} else if (file == "1v1-top10.js") {
 		commandsmainserver.push(command.data.toJSON());		
 	} else if (file == "create-lounge-game.js") {
-		commandsdev.push(command.data.toJSON());
-		//commandsmainserver.push(command.data.toJSON());		
+		commandsmainserver.push(command.data.toJSON());
 	} else if (file == "eventlabs-create.js") {
 		commandsmainserver.push(command.data.toJSON());		
 	} else {

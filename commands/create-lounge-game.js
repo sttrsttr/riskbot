@@ -13,8 +13,6 @@ module.exports = {
                 .setDescription('Number of players for the lounge game')
                 .setRequired(true)
                 .addChoices(
-                    { name: '1 players', value: 1 },
-                    { name: '2 players', value: 2 },
                     { name: '4 players', value: 4 },
                     { name: '5 players', value: 5 },
                     { name: '6 players', value: 6 },
@@ -37,10 +35,11 @@ module.exports = {
                     { name: '0', value: 0 },
                     { name: '950', value: 950 },
                     { name: '1000', value: 1000 },
-                    { name: '1010', value: 1010 },
+                    { name: '1001', value: 1001 },
                     { name: '1050', value: 1050 },
                     { name: '1100', value: 1100 },
                     { name: '1150', value: 1150 },
+                    { name: '1200', value: 1200 },
                 )
         )
 
@@ -106,7 +105,9 @@ module.exports = {
             }
 
             // Message the channel about the created thread, with a button to join the thread yourself that you can click on
-            const joinmessage = await channel.send({ content: `New ${type} Lounge game created.\n\n- Player count: ${player_count}\n- ELO requirement: ${min_elo_limit}\n - Status: ${player_count - 1} spots remaining\n\nUse the button below to join the game.\n<@&${pingrole}>`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel('Join game').setStyle(ButtonStyle.Danger))] });
+            const joinmessage = await channel.send({ content: `New ${type} Lounge game created.\n<@&${pingrole}>` });
+
+            const welcomemessage = await thread.send({ content: `Welcome to this new lounge thread` });
 
             const options2 = {
                 hostname: 'friendsofrisk.com',
@@ -122,6 +123,7 @@ module.exports = {
                 channelid: channel.id,
                 threadid: thread.id,
                 joinmessageid: joinmessage.id,
+                welcomemessageid: welcomemessage.id,
                 player: interaction.user.id,
                 lobby_type: type,
                 elolimit: min_elo_limit,

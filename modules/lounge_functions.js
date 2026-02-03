@@ -114,35 +114,15 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
     }
     message += `\nPlease wait for the remaining players to join...\n\n`;
 
-    let welcomeMessage; // Declare in a broader scope
+    let buttonstyle = ButtonStyle.Success;
+    if (threadmeta.lobbytype == "Competitive") {
+        buttonstyle = ButtonStyle.Primary;
+    }
 
-    if (!threadmeta.welcomemessageid) {
-        // Create welcome message, with a button to leave the thread at the bottom
-        welcomeMessage = await thread.send({ content: message, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('leave_lounge_game').setLabel('Leave game').setStyle(ButtonStyle.Danger))] });
-
-        // Update welcome message ID in database
-        const options = {
-            hostname: 'friendsofrisk.com',
-            path: '/m2mapi/updateloungegame',
-            method: 'POST',
-            headers: {
-                'X-API-KEY': global.config.for_api_key
-            }
-        };
-
-        const postData = JSON.stringify({
-            threadid: thread.id,
-            welcomemessageid: welcomeMessage.id
-        });
-
-        const output = await httpsPostRequest(options, postData);
-
-    } else {
-        // Update existing welcome message
-        welcomeMessage = await thread.messages.fetch(threadmeta.welcomemessageid);
-        if (welcomeMessage) {
-            await welcomeMessage.edit({ content: message, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('leave_lounge_game').setLabel('Leave game').setStyle(ButtonStyle.Danger))] });
-        }
+    // Update existing welcome message
+    welcomeMessage = await thread.messages.fetch(threadmeta.welcomemessageid);
+    if (welcomeMessage) {
+        await welcomeMessage.edit({ content: message, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('leave_lounge_game').setLabel('Leave game').setStyle(ButtonStyle.Danger))] });
     }
 
     const channel = await guild.channels.fetch(threadmeta.channelid);
@@ -161,7 +141,7 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
         joinmessage.delete();
         welcomeMessage.delete();
     } else {
-        await joinmessage.edit({ content: `New ${threadmeta.lobbytype} Lounge game created.\n\n- Player count: ${threadmeta.lobbysize}\n- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel('Join game').setStyle(ButtonStyle.Danger))] });
+        await joinmessage.edit({ content: `New ${threadmeta.lobbytype} Lounge game created.\n\n- Player count: ${threadmeta.lobbysize}\n- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel('Join '+ threadmeta.lobbytype + ' game').setStyle(buttonstyle))] });
     }
 
 }
@@ -300,6 +280,16 @@ async function removeLoungeMember(guild, thread, userid) {
 
                     threadmeta.playercount--;
                     threadmeta.players = threadmeta.players.filter(id => id !== member.id);
+
+                    if (threadmeta.playercount == 0) {
+                        const joinmessage = await guild.channels.fetch(threadmeta.channelid).then(channel => channel.messages.fetch(threadmeta.joinmessageid));
+                        await joinmessage.delete();
+                        // No players left, delete the thread
+                        await thread.delete('No players left in lounge game thread.');
+                        console.log(`Deleted thread ${thread.name} as no players are left.`);
+                        return;
+                    }
+
                     // Update lounge messages
                     await updateLoungeMessages(guild, thread, threadmeta);
 

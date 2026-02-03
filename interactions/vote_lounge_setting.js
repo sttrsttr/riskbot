@@ -122,9 +122,6 @@ module.exports = async (interaction) => {
         const output4 = await httpsPostRequest(options4, postData4);
 
 
-
-
-
 	} catch (error) {
 		console.error(error);
 		await interaction.reply({ content: "Error, please try again later", flags: 64 });
