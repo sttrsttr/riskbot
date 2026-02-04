@@ -287,6 +287,25 @@ async function removeLoungeMember(guild, thread, userid) {
                         // No players left, delete the thread
                         await thread.delete('No players left in lounge game thread.');
                         console.log(`Deleted thread ${thread.name} as no players are left.`);
+
+
+                        // Update vote message ID in database
+                        const options5 = {
+                            hostname: 'friendsofrisk.com',
+                            path: '/m2mapi/updateloungegame',
+                            method: 'POST',
+                            headers: {
+                                'X-API-KEY': global.config.for_api_key
+                            }
+                        };
+
+                        const postData5 = JSON.stringify({
+                            threadid: thread.id,
+                            cancelled: 1
+                        });
+
+                        const output5 = await httpsPostRequest(options5, postData5);
+
                         return;
                     }
 
