@@ -190,7 +190,6 @@ client.on('guildMemberAdd', async (member) => {
 // Listen for any commands
 client.on(Events.InteractionCreate, async interaction => {
 	if (interaction.isButton() || interaction.isStringSelectMenu()) {
-		console.log(interaction.customId);
 		const handler = buttonHandlers.get(interaction.customId);
 		if (handler) {
 			try {
@@ -282,8 +281,6 @@ client.on('messageCreate', async (message) => {
 
 				// Handle !gamecode <code>
 				if (contentorig.startsWith('!gamecode ')) {
-					console.log(typeof config.playerThreads);
-					console.log(config.playerThreads);
 					const code = contentorig.substring(10).trim();
 					await relayGameCode(client, mainChannelId, config.playerThreads, code, thread.id);
 					return;
@@ -469,6 +466,32 @@ app.post('/api/deletechannel', async (req, res) => {
 	}
 });
 
+
+// API Endpoint for deleting a deleteloungegame
+app.post('/api/deleteloungegame', async (req, res) => {
+	try {
+		let post = req.body;
+
+		if (post.serverid === undefined || post.channelid === undefined || post.threadid === undefined || post.joinmessageid === undefined) {
+			throw new Error('Missing required parameters');
+		}
+
+		let output = await deleteThread(client, post.serverid, post.channelid, post.threadid);;
+
+		const channel = await client.channels.fetch(post.channelid);
+		if (!channel) throw new Error('Channel not found');
+		const message = await channel.messages.fetch(post.joinmessageid);
+		if (!message) throw new Error('Message not found');
+		await message.delete();
+
+		res.header("Content-Type", 'application/json');
+		res.send(JSON.stringify(output, null, 4));
+	} catch (error) {
+		console.error('Error in thread closing:', error);
+		res.status(500).send({ error: "An error occurred during thread deletion" });
+	}
+});
+
 // API Endpoint for deleting a thread
 app.post('/api/deletethread', async (req, res) => {
 	try {
@@ -520,7 +543,6 @@ app.post('/api/addrole', async (req, res) => {
 			member = await guild.members.fetch(post.userid);
 		} catch (error) {
 			if (error.code === 10007) { // Discord API Error Code 10007: Unknown Member
-				console.log('Member not found in the server');
 				output = "Failed: Member not found";
 			} else {
 				throw error; // Rethrow any other error
@@ -561,7 +583,6 @@ app.post('/api/removerole', async (req, res) => {
 			member = await guild.members.fetch(post.userid);
 		} catch (error) {
 			if (error.code === 10007) { // Discord API Error Code 10007: Unknown Member
-				console.log('Member not found in the server');
 				output = "Failed: Member not found";
 			} else {
 				throw error; // Rethrow any other error

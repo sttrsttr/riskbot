@@ -1,4 +1,4 @@
-const { AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, StringSelectMenuBuilder } = require('discord.js');
+const { AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, StringSelectMenuBuilder, AllowedMentionsTypes } = require('discord.js');
 const { updateSettingVoteMessage } = require('../modules/lounge_functions.js');
 const { httpsPostRequest, httpsGetRequest } = require('../modules/helperfunctions.js');
 
@@ -39,29 +39,20 @@ module.exports = async (interaction) => {
             return;
         }
 
-        const missing_votes_cnt = threadmeta.notvoted.length;
-
-        if (missing_votes_cnt > 0) {
-            // Create user mention ping for those who have not voted yet
-            let notvoted_ping = '';
-            for (let i = 0; i < threadmeta.notvoted.length; i++) {
-                notvoted_ping += `<@${threadmeta.notvoted[i]}> `;
-            }
-            await thread.send(`${notvoted_ping}\nThere are still ${missing_votes_cnt} players who have not voted for a winner yet.`);
-            return;
-            
-        }
-
         if (!threadmeta.winner) {
-            // Something went wrong, no winner selected
-            await thread.send(`Error: Not able to determine winner, please adjust your votes`);
-            return;
-        }
 
-        const winnerDiscordUser = await guild.members.fetch(threadmeta.winner);
+            const missing_votes_cnt = threadmeta.notvoted.length;
 
-        if (!winnerDiscordUser) {
-            await thread.send(`Error: Not able to fetch winner user data, did the user leave the server?`);
+            if (missing_votes_cnt > 0) {
+                // Create user mention ping for those who have not voted yet
+                let notvoted_ping = '';
+                for (let i = 0; i < threadmeta.notvoted.length; i++) {
+                    notvoted_ping += `<@${threadmeta.notvoted[i]}> `;
+                }
+                await thread.send(`${notvoted_ping}\nThere are still ${missing_votes_cnt} players who have not voted for a winner yet.`);
+
+            }
+
             return;
         }
 
@@ -71,26 +62,17 @@ module.exports = async (interaction) => {
             await winnerVoteMessage.delete();
         }
 
-        // All players have voted, finalize the setting
-        const settingEmbed = new EmbedBuilder()
-            .setTitle(`Congratulations!`)
-            .setDescription('The winner of the game has been decided:')
-        .setColor(0x00AE86);
+        console.log(`Winner:`, threadmeta.winner);
+        const winnermsg = "Winner: <@"+ threadmeta.winner + ">";
 
-        const winnerName = winnerDiscordUser.nickname || winnerDiscordUser.user.globalName || winnerDiscordUser.user.username;
-
-        settingEmbed.addFields(
-            { name: 'Winner', value: `${winnerName}` },
-        );
-
-        const voteMessage = await thread.send({ embeds: [settingEmbed] });
+        const voteMessage = await thread.send({ content: winnermsg, allowedMentions: { users: [threadmeta.winner] } });
 
         await thread.setLocked(true);
         await thread.setArchived(true);
 
 	} catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", flags: 64 });
+		await interaction.followUp({ content: "Error, please try again later", flags: 64 });
 	}
 
 };

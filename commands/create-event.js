@@ -257,6 +257,13 @@ async execute(interaction, client) {
 					resolve(result);
 				});
 			});
+			sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__staff` VALUES ("+ eventid +","+ interaction.user.id +")";
+			result = await new Promise((resolve, reject) => {
+				con.query(sql, function (err, result) {
+					if (err) reject(err);
+					resolve(result);
+				});
+			});
 
 		} catch (error) {
 			console.error(error);

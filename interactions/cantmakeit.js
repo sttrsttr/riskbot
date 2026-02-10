@@ -1,5 +1,7 @@
 var mysql = require('mysql2');
 
+const { AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, StringSelectMenuBuilder } = require('discord.js');
+
 module.exports = async (interaction) => {
 
     const userid = interaction.user.id;

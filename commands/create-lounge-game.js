@@ -13,6 +13,7 @@ module.exports = {
                 .setDescription('Number of players for the lounge game')
                 .setRequired(true)
                 .addChoices(
+                    { name: '3 players (Relaxed only)', value: 3 },
                     { name: '4 players', value: 4 },
                     { name: '5 players', value: 5 },
                     { name: '6 players', value: 6 },
@@ -53,6 +54,11 @@ module.exports = {
             const type = interaction.options.getString('type');
             const min_elo_limit = interaction.options.getInteger('min_elo_limit') || 0;
 
+            if (type == "Competitive" && player_count == 3) {
+                await interaction.followUp({ content: `Sorry, 3-player competitive lounge games are not allowed. Please choose a different player count or type.`, flags: 64 });
+                return;
+            }
+
             const nickname = interactionUser.nickname || interactionUser.user.globalName || interactionUser.user.username;
 
             // Get info about the player from FoR API to verify that their ELO is above the threshold
@@ -67,6 +73,7 @@ module.exports = {
             };
 
             const postData1 = JSON.stringify({
+                name: nickname,
                 discordid: interaction.user.id,
             });
 
@@ -105,7 +112,7 @@ module.exports = {
             }
 
             // Message the channel about the created thread, with a button to join the thread yourself that you can click on
-            const joinmessage = await channel.send({ content: `New ${type} Lounge game created.\n<@&${pingrole}>` });
+            const joinmessage = await channel.send({ content: `New ${player_count}P ${type} Lounge game created.\n<@&${pingrole}>` });
 
             const welcomemessage = await thread.send({ content: `Welcome to this new lounge thread` });
 

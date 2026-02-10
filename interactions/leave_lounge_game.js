@@ -6,6 +6,8 @@ module.exports = async (interaction) => {
 	const threadid = interaction.message.channelId;
 	const messageid = interaction.message.id;
 
+	await interaction.reply({ content: "Alright my friend!", flags: 64 });
+
 	try {
 
         const thread = await interaction.guild.channels.fetch(threadid);			
@@ -13,7 +15,7 @@ module.exports = async (interaction) => {
 
 	} catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", flags: 64 });
+		await interaction.followup({ content: "Error, please try again later", flags: 64 });
 	}
 
 };

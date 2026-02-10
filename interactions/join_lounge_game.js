@@ -6,6 +6,9 @@ module.exports = async (interaction) => {
     const userid = interaction.user.id;
 	const messageid = interaction.message.id;
 
+    await interaction.reply({ content: "Alright my friend!", flags: 64 });
+
+
 	try {
 
 			// Get thread meta info
@@ -23,7 +26,15 @@ module.exports = async (interaction) => {
             });
 
             const output = await httpsPostRequest(options, postData);
-            const threadmeta = JSON.parse(output).gamedata;
+            const results = JSON.parse(output);
+
+            const threadmeta = results.gamedata
+
+            if (results.status != 'success') {
+                await interaction.followup({ content: "Error, you are not unable to join this game", flags: 64 });
+                return;
+            }
+
 			const thread = await interaction.guild.channels.fetch(threadmeta.threadid);
 			
 			// Verify that there still are free spots
@@ -36,7 +47,7 @@ module.exports = async (interaction) => {
 
 	} catch (error) {
 		console.error(error);
-		await interaction.reply({ content: "Error, please try again later", flags: 64 });
+		await interaction.followup({ content: "Error, please try again later", flags: 64 });
 	}
 
 };

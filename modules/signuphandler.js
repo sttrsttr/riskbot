@@ -143,6 +143,8 @@ async function pingparticipants(message, client) {
 
             const res2 = await httpsPostRequest(options2, postData2);
 
+            console.log(res2);
+
             const events = JSON.parse(res2);
             const event = events[0];
 

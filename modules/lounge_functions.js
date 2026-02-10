@@ -83,7 +83,7 @@ async function updateSettingVoteMessage(guild, thread, threadmeta) {
                 .addOptions(settingOptions)
         );
 
-    const voteMessage = await thread.send({ embeds: [settingEmbed], components: [row] });
+    const voteMessage = await thread.send({ content: `Settinglink: ${settinglink}`, embeds: [settingEmbed], components: [row] });
     
     // Update vote message ID in database
     const options4 = {
@@ -115,8 +115,12 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
     message += `\nPlease wait for the remaining players to join...\n\n`;
 
     let buttonstyle = ButtonStyle.Success;
+
+    let emote = '🏖️';
+
     if (threadmeta.lobbytype == "Competitive") {
-        buttonstyle = ButtonStyle.Primary;
+        buttonstyle = ButtonStyle.Danger;
+        emote = '🏟️';
     }
 
     // Update existing welcome message
@@ -137,11 +141,16 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
         return;
     }
 
+    let playerlistmsg = '';
+    for (const player of threadmeta.players) {
+        playerlistmsg += ` • <@${player}>\n`;
+    }
+
     if (threadmeta.playercount >= threadmeta.lobbysize) {
-        joinmessage.delete();
+        await joinmessage.edit({ content: `${emote} ${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge game is now full ${emote}\n\n- Players:\n${playerlistmsg}- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining`, components: [] });
         welcomeMessage.delete();
     } else {
-        await joinmessage.edit({ content: `New ${threadmeta.lobbytype} Lounge game created.\n\n- Player count: ${threadmeta.lobbysize}\n- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel('Join '+ threadmeta.lobbytype + ' game').setStyle(buttonstyle))] });
+        await joinmessage.edit({ content: `${emote} New ${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge game created ${emote}\n\n- Players:\n${playerlistmsg}- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel(`Join ${emote} ${threadmeta.lobbytype} game`).setStyle(buttonstyle))] });
     }
 
 }
@@ -282,12 +291,11 @@ async function removeLoungeMember(guild, thread, userid) {
                     threadmeta.players = threadmeta.players.filter(id => id !== member.id);
 
                     if (threadmeta.playercount == 0) {
+
                         const joinmessage = await guild.channels.fetch(threadmeta.channelid).then(channel => channel.messages.fetch(threadmeta.joinmessageid));
                         await joinmessage.delete();
                         // No players left, delete the thread
                         await thread.delete('No players left in lounge game thread.');
-                        console.log(`Deleted thread ${thread.name} as no players are left.`);
-
 
                         // Update vote message ID in database
                         const options5 = {

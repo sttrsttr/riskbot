@@ -33,6 +33,11 @@ module.exports = async (interaction) => {
         const output = await httpsPostRequest(options, postData);
         const threadmeta = JSON.parse(output).gamedata;
 
+        console.log(`All votes:`, threadmeta.allvotes);
+        console.log(`Cancel vote:`, threadmeta.cancelvote);
+        console.log(`Reshuffle vote:`, threadmeta.reshufflevote);
+        console.log(`Not voted:`, threadmeta.notvoted);
+
         if (threadmeta.cancelvote) {
             // Delete thread, the game is cancelled
             await thread.delete('Lounge game cancelled due to vote');
@@ -41,6 +46,7 @@ module.exports = async (interaction) => {
 
         if (threadmeta.reshufflevote) {
             // Fetch settings again
+            await thread.send('Re-shuffling settings as >50% voted for it...');
             await updateSettingVoteMessage(guild, thread, threadmeta);
             return;
         }
