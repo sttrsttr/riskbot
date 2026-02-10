@@ -31,7 +31,7 @@ module.exports = async (interaction) => {
             const threadmeta = results.gamedata
 
             if (results.status != 'success') {
-                await interaction.followup({ content: "Error, you are not unable to join this game", flags: 64 });
+                await interaction.followup({ content: "Error, you are not unable to join this game (already in a lobby?)", flags: 64 });
                 return;
             }
 

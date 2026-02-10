@@ -30,6 +30,8 @@ module.exports = async (interaction) => {
             winner: winner
         });
 
+        console.log(`Voted winner:`, winner);
+
         const output = await httpsPostRequest(options, postData);
         const threadmeta = JSON.parse(output).gamedata;
 
@@ -62,10 +64,7 @@ module.exports = async (interaction) => {
             await winnerVoteMessage.delete();
         }
 
-        console.log(`Winner:`, threadmeta.winner);
-        const winnermsg = "Winner: <@"+ threadmeta.winner + ">";
-
-        const voteMessage = await thread.send({ content: winnermsg, allowedMentions: { users: [threadmeta.winner] } });
+        const voteMessage = await thread.send(`Winner: ${threadmeta.winnerdata.name}`);
 
         await thread.setLocked(true);
         await thread.setArchived(true);

@@ -108,7 +108,7 @@ module.exports = async (interaction) => {
                 .addOptions(settingOptions)
         );
 
-        const voteMessage = await thread.send({ embeds: [settingEmbed], components: [row] });
+        const voteMessage = await thread.send({ content: `${settinglink}`, embeds: [settingEmbed], components: [row] });
 
         // Update vote message ID in database
         const options4 = {

@@ -108,7 +108,7 @@ async function updateSettingVoteMessage(guild, thread, threadmeta) {
 
 async function updateLoungeMessages(guild, thread, threadmeta) {
 
-    let message = `${threadmeta.playercount}p ${threadmeta.lobbytype} Lounge lobby\n\n${threadmeta.playercount}/${threadmeta.lobbysize} players joined\n\n`;
+    let message = `${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge lobby\n\n${threadmeta.playercount}/${threadmeta.lobbysize} players joined\n\n`;
     for (const player of threadmeta.players) {
         message += `• <@${player}> joined\n`;
     }
