@@ -22,7 +22,8 @@ module.exports = async (interaction) => {
             };
 
             const postData = JSON.stringify({
-                joinmessageid: messageid
+                joinmessageid: messageid,
+                playerid: userid
             });
 
             const output = await httpsPostRequest(options, postData);
@@ -31,7 +32,7 @@ module.exports = async (interaction) => {
             const threadmeta = results.gamedata
 
             if (results.status != 'success') {
-                await interaction.followup({ content: "Error, you are not unable to join this game (already in a lobby?)", flags: 64 });
+                await interaction.followUp({ content: "Error, you are not unable to join this game (already in a lobby?)", flags: 64 });
                 return;
             }
 
@@ -47,7 +48,7 @@ module.exports = async (interaction) => {
 
 	} catch (error) {
 		console.error(error);
-		await interaction.followup({ content: "Error, please try again later", flags: 64 });
+		await interaction.followUp({ content: "Error, please try again later", flags: 64 });
 	}
 
 };
