@@ -124,7 +124,7 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
     }
 
     // Update existing welcome message
-    welcomeMessage = await thread.messages.fetch(threadmeta.welcomemessageid);
+    const welcomeMessage = await thread.messages.fetch(threadmeta.welcomemessageid);
     if (welcomeMessage) {
         await welcomeMessage.edit({ content: message, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('leave_lounge_game').setLabel('Leave game').setStyle(ButtonStyle.Danger))] });
     }
@@ -147,8 +147,8 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
     }
 
     if (threadmeta.playercount >= threadmeta.lobbysize) {
-        await joinmessage.edit({ content: `${emote} ${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge game is now full ${emote}\n\n- Players:\n${playerlistmsg}- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining`, components: [] });
-        welcomeMessage.delete();
+        await joinmessage.delete();
+        await welcomeMessage.delete();
     } else {
         await joinmessage.edit({ content: `${emote} New ${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge game created ${emote}\n\n- Players:\n${playerlistmsg}- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel(`Join ${emote} ${threadmeta.lobbytype} game`).setStyle(buttonstyle))] });
     }

@@ -3,6 +3,7 @@
 .bashrc
 .bash_history
 .profile
+.lesshst
 .gitconfig
 .profile
 riskbot_config.json

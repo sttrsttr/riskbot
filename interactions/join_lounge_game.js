@@ -6,8 +6,18 @@ module.exports = async (interaction) => {
     const userid = interaction.user.id;
 	const messageid = interaction.message.id;
 
-    await interaction.reply({ content: "Alright my friend!", flags: 64 });
+    const randommessages = [
+        "I hope this works...",
+        "Alright my friend! Let's do this...",
+        "Joining the lounge game...",
+        "Trying to join the lounge game...",
+        "Connecting to the lounge game...",
+        "Entering the lounge game..."
+    ];
 
+    const randommessage = randommessages[Math.floor(Math.random() * randommessages.length)];
+
+    await interaction.reply({ content: randommessage, flags: 64 });
 
 	try {
 
@@ -32,7 +42,7 @@ module.exports = async (interaction) => {
             const threadmeta = results.gamedata
 
             if (results.status != 'success') {
-                await interaction.followUp({ content: "Error, you are not unable to join this game (already in a lobby?)", flags: 64 });
+                await interaction.followUp({ content: `Error, you are not unable to join this game (${results.message})`, flags: 64 });
                 return;
             }
 
