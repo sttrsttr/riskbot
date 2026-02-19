@@ -96,6 +96,11 @@ module.exports = {
                 return;
             }
 
+            if (!channel) {
+                await interaction.followUp({ content: `Sorry, I couldn't find the channel.`, flags: 64 });
+                return;
+            }
+
             // Create a thread
             const thread = await channel.threads.create({
                 name: nickname + '-' + type + '-' + player_count + 'p-lounge-game',

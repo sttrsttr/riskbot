@@ -147,7 +147,7 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
     }
 
     if (threadmeta.playercount >= threadmeta.lobbysize) {
-        await joinmessage.delete();
+        await joinmessage.edit({ content: `${emote} Lounge game is now full! ${emote}\n\n- Players:\n${playerlistmsg}- ELO requirement: ${threadmeta.elolimit}\n\n`, components: [] });
         await welcomeMessage.delete();
     } else {
         await joinmessage.edit({ content: `${emote} New ${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge game created ${emote}\n\n- Players:\n${playerlistmsg}- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel(`Join ${emote} ${threadmeta.lobbytype} game`).setStyle(buttonstyle))] });
@@ -258,7 +258,14 @@ async function removeLoungeMember(guild, thread, userid) {
             });
 
             const output = await httpsPostRequest(options, postData);
-            const threadmeta = JSON.parse(output).gamedata;
+            const result = JSON.parse(output);
+
+            if (result.status !== 'success') {
+                console.log(`Failed to fetch lounge game data for thread ${thread.name}.`);
+                return;
+            }
+
+            const threadmeta = result.gamedata;
 
             const options2 = {
                 hostname: 'friendsofrisk.com',
@@ -290,10 +297,10 @@ async function removeLoungeMember(guild, thread, userid) {
                     threadmeta.playercount--;
                     threadmeta.players = threadmeta.players.filter(id => id !== member.id);
 
-                    if (threadmeta.playercount == 0) {
+                    if (threadmeta.playercount == 0 || threadmeta.settingvotemessageid) {
 
                         const joinmessage = await guild.channels.fetch(threadmeta.channelid).then(channel => channel.messages.fetch(threadmeta.joinmessageid));
-                        await joinmessage.delete();
+                        await joinmessage.edit({ content: `Lounge game cancelled due to players leaving`, components: [] });
                         // No players left, delete the thread
                         await thread.delete('No players left in lounge game thread.');
 

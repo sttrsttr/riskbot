@@ -468,9 +468,6 @@ async function message_thread(client, msgserver, msgchannel, msgthread, msg, tus
 			userPings += `<@${userid}> `;
 		}
 
-		//console.log(tusers);
-		//console.log(`Userpings:`, userPings);
-
 		const embed = new EmbedBuilder()
 			.setTitle(`Important message!`)
 			.setDescription(messagetext)

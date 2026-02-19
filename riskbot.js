@@ -44,6 +44,7 @@ const {
 
 const { checkNewButNotSignedUp } = require('./modules/memberhandler.js');
 const { refreshtournamentcalendar } = require('./modules/eventsCalendar.js');
+const { removeLoungeMember } = require('./modules/lounge_functions.js');
 
 // Generic Riskbot helper functions
 const { add_to_thread,
@@ -238,10 +239,7 @@ client.on(Events.InteractionCreate, async interaction => {
 	}
 });
 
-
-
-
-// Listen for event signup messages
+// Listen for messages
 client.on('messageCreate', async (message) => {
 	if (!message.author.bot && !message.system) {
 		const contentorig = message.content.trim();
@@ -325,6 +323,61 @@ client.on('messageCreate', async (message) => {
 
 		}
 	}
+});
+
+
+// threadMembersUpdate
+/* Emitted whenever members are added or removed from a thread. 
+Permissions Required: GUILD_MEMBERS privileged intent
+PARAMETER    TYPE                                   DESCRIPTION
+newMembers   Collection <Snowflake, ThreadMember>   The members after the update    
+oldMembers   Collection <Snowflake, ThreadMember>   The members before the update
+*/
+client.on('threadMembersUpdate', async (newMembers, oldMembers, thread) => {
+
+	const channelid = thread.parentId;
+	const serverid = thread.guildId;
+
+	// Loop through each oldMembers
+	oldMembers.forEach((member) => {
+		if (!newMembers.has(member.id)) {
+			// User has left the thread
+			console.log(`User ${member.id} left thread ${thread.id}`);
+
+			removeLoungeMember(serverid, thread.id, member.id);
+
+			// Handle removal logic here
+		}
+	});
+
+	// Loop through each newMembers
+	newMembers.forEach((member) => {
+		if (!oldMembers.has(member.id)) {
+			// User has joined the thread
+			console.log(`User ${member.id} joined thread ${thread.id}`);
+			// Handle addition logic here
+		}
+	});
+
+	/*
+	removedMembers.forEach((member) => {
+		// User has left the thread
+		console.log(`User ${member.id} left thread ${thread.id}`);
+		// Handle removal logic here
+	});
+	// Fetch server, channel, and user information for logging
+	const threadId = thread.id;
+	const channelId = thread.parentId;
+	const serverId = thread.guildId;
+
+		console.log(`User ${member.id} left thread ${threadId} in channel ${channelId} on server ${serverId}`);
+		/*
+		try {
+			await removefromthread(client, serverId, channelId, threadId, member.id);
+		} catch (error) {
+			console.error('Error while handling thread member update:', error);
+		}
+		*/
 });
 
 

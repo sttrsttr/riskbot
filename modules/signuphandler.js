@@ -143,8 +143,6 @@ async function pingparticipants(message, client) {
 
             const res2 = await httpsPostRequest(options2, postData2);
 
-            console.log(res2);
-
             const events = JSON.parse(res2);
             const event = events[0];
 
@@ -287,7 +285,7 @@ async function pingwaitlist(client, thread) {
 
             const date = new Date(group.gametime);
 
-            if (mentionroles.length > 0) {
+            if (mentionroles) {
 
                 const message = `Attention ${mention} there is probably an open spot in ${group.name} starting in <t:${date.getTime() / 1000}:R>\n\nFirst come first serve, click this button to join this group!`;
 
@@ -443,8 +441,11 @@ async function signupHandler(message, client) {
 
                             const username = member.nickname || member.user.globalName || member.user.username;
 
+                            // Remove any ' characters from username
+                            const sanitizedUsername = username.replace(/'/g, "");
+
                             const guid = uuidv4().toUpperCase();
-                            let sql = "INSERT INTO `" + global.config.mysql_database + "`.`users` (`name`, `discordid`, `guid`, `guid_validto`) VALUES ('" + username + "','" + member.id + "','" + guid + "',DATE_ADD(NOW(), INTERVAL +1 WEEK));";
+                            let sql = "INSERT INTO `" + global.config.mysql_database + "`.`users` (`name`, `discordid`, `guid`, `guid_validto`) VALUES ('" + sanitizedUsername + "','" + member.id + "','" + guid + "',DATE_ADD(NOW(), INTERVAL +1 WEEK));";
                             try {
                                 const result = await new Promise((resolve, reject) => {
                                     con.query(sql, function (err, result) {

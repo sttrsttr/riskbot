@@ -28,7 +28,6 @@ async function processBatch(members, guildId) {
         });
         res.on('end', () => {
             const signedupIds = JSON.parse(data);
-            console.log(signedupIds);
             // Use signedupIds here
         });
     });
