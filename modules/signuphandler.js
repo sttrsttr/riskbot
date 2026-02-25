@@ -677,7 +677,6 @@ async function eventmanagerCheckinStart(client) {
 
                 const playerIds = players.map(player => player.playerid);
                 const messageid = await thread.send({ content: message, components: [], allowedMentions: { users: playerIds, repliedUser: false } });
-                await messageid.pin();
 
                 sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `checkinmessageid` = " + messageid + " WHERE `id` = " + group.id + "";
                 await new Promise((resolve, reject) => {
@@ -688,6 +687,8 @@ async function eventmanagerCheckinStart(client) {
                 });
 
                 await updatecheckinmessage(thread);
+                await messageid.pin();
+
             }
 
         }

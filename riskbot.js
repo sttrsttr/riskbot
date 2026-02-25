@@ -343,10 +343,7 @@ client.on('threadMembersUpdate', async (newMembers, oldMembers, thread) => {
 		if (!newMembers.has(member.id)) {
 			// User has left the thread
 			console.log(`User ${member.id} left thread ${thread.id}`);
-
 			removeLoungeMember(serverid, thread.id, member.id);
-
-			// Handle removal logic here
 		}
 	});
 
@@ -354,30 +351,11 @@ client.on('threadMembersUpdate', async (newMembers, oldMembers, thread) => {
 	newMembers.forEach((member) => {
 		if (!oldMembers.has(member.id)) {
 			// User has joined the thread
-			console.log(`User ${member.id} joined thread ${thread.id}`);
+			//console.log(`User ${member.id} joined thread ${thread.id}`);
 			// Handle addition logic here
 		}
 	});
 
-	/*
-	removedMembers.forEach((member) => {
-		// User has left the thread
-		console.log(`User ${member.id} left thread ${thread.id}`);
-		// Handle removal logic here
-	});
-	// Fetch server, channel, and user information for logging
-	const threadId = thread.id;
-	const channelId = thread.parentId;
-	const serverId = thread.guildId;
-
-		console.log(`User ${member.id} left thread ${threadId} in channel ${channelId} on server ${serverId}`);
-		/*
-		try {
-			await removefromthread(client, serverId, channelId, threadId, member.id);
-		} catch (error) {
-			console.error('Error while handling thread member update:', error);
-		}
-		*/
 });
 
 

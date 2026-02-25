@@ -121,6 +121,9 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
     if (threadmeta.lobbytype == "Competitive") {
         buttonstyle = ButtonStyle.Danger;
         emote = '🏟️';
+    } else if (threadmeta.lobbytype == "Relaxed Caps") {
+        buttonstyle = ButtonStyle.Primary;
+        emote = '🏖️🏰';
     }
 
     // Update existing welcome message

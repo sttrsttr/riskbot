@@ -26,6 +26,7 @@ module.exports = {
                 .addChoices(
                     { name: 'Competitive', value: 'Competitive' },
                     { name: 'Relaxed', value: 'Relaxed' },
+                    { name: 'RelaxedCaps', value: 'Relaxed Caps' },
                 )
         )
         .addIntegerOption(option =>

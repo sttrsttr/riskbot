@@ -284,7 +284,11 @@ async function removefromthread(client, server, channelid, threadid, userid) {
 		return "SUCCESS";
 
 	} catch (error) {
-		console.error('Error fetching guild or channel:', error);
+		if (error.code === 10007) {
+			// Member has left the guild, no problem
+		} else {
+			console.error('Error removing from thread:', error);
+		}
 	}
 
 };
