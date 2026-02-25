@@ -10,6 +10,7 @@ riskbot_config.json
 riskbot_key.json
 riskbot.log
 .ssh/*
+.copilot/*
 .cache/*
 .config/*
 .git/*
