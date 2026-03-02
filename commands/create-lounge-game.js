@@ -24,9 +24,24 @@ module.exports = {
                 .setDescription('Type of lounge game')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Competitive', value: 'Competitive' },
-                    { name: 'Relaxed', value: 'Relaxed' },
-                    { name: 'RelaxedCaps', value: 'Relaxed Caps' },
+                    { name: 'Relaxed (mostly for fun)', value: 'Relaxed' },
+                    { name: 'Casual (somewhat competitive)', value: 'Casual' },
+                    { name: 'Competitive (highly competitive)', value: 'Competitive' },
+                )
+        )
+        .addStringOption(option =>
+            option.setName('mode')
+                .setDescription('Game mode to draw settings from')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Mix of all game modes', value: 'ALL' },
+                    { name: 'World Domination', value: 'wd' },
+                    { name: '70% Domination', value: '70' },
+                    { name: 'Capital Conquest', value: 'cap' },
+                    { name: 'Speed Blitz / 5RR', value: 'speed' },
+                    { name: 'Zombies', value: 'zombie' },
+                    { name: 'Assassins', value: 'assassin' },
+                    { name: 'Secret Missions', value: 'secret' },
                 )
         )
         .addIntegerOption(option =>
@@ -52,11 +67,17 @@ module.exports = {
 
             const interactionUser = await interaction.guild.members.fetch(interaction.user.id);
             const player_count = interaction.options.getInteger('player_count');
+            const mode = interaction.options.getString('mode');
             const type = interaction.options.getString('type');
             const min_elo_limit = interaction.options.getInteger('min_elo_limit') || 0;
 
-            if (type == "Competitive" && player_count == 3) {
-                await interaction.followUp({ content: `Sorry, 3-player competitive lounge games are not allowed. Please choose a different player count or type.`, flags: 64 });
+            if ((type == "Competitive" || type == "Casual") && player_count == 3) {
+                await interaction.followUp({ content: `Sorry, 3-player lounge games are only available in Relaxed.`, flags: 64 });
+                return;
+            }
+
+            if (type != "Relaxed" && mode != "ALL" && mode != "70" && mode != "wd" && mode != "zombie") {
+                await interaction.followUp({ content: `Sorry, only ALL, 70, or World Domination mode is available for Competitive and Casual lounge games at this time.`, flags: 64 });
                 return;
             }
 
@@ -113,6 +134,8 @@ module.exports = {
 
             if (type == "Competitive") {
                 pingrole = global.config.competitive_lounge_role;
+            } else if (type == "Casual") {
+                pingrole = global.config.casual_lounge_role;
             } else {
                 pingrole = global.config.relaxed_lounge_role;
             }
@@ -139,6 +162,7 @@ module.exports = {
                 welcomemessageid: welcomemessage.id,
                 player: interaction.user.id,
                 lobby_type: type,
+                game_mode: mode,
                 elolimit: min_elo_limit,
                 lobbysize: player_count,
             });

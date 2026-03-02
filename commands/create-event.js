@@ -145,6 +145,10 @@ async execute(interaction, client) {
 						id: botMember.roles.botRole.id, // Set full permissions for the bot's role
 						allow: [
 							PermissionsBitField.Flags.ViewChannel,
+							PermissionsBitField.Flags.EmbedLinks,
+							PermissionsBitField.Flags.ReadMessageHistory,
+							PermissionsBitField.Flags.ViewChannel,
+							PermissionsBitField.Flags.PinMessages,
 							PermissionsBitField.Flags.SendMessages,
 							PermissionsBitField.Flags.ManageChannels,
 							PermissionsBitField.Flags.ManageMessages,
@@ -159,12 +163,16 @@ async execute(interaction, client) {
 						id: interaction.user.id, // Set the permissions for the newly created role
 						allow: [
 							PermissionsBitField.Flags.ViewChannel,
+							PermissionsBitField.Flags.EmbedLinks,
+							PermissionsBitField.Flags.ReadMessageHistory,
+							PermissionsBitField.Flags.ViewChannel,
+							PermissionsBitField.Flags.PinMessages,
 							PermissionsBitField.Flags.SendMessages,
 							PermissionsBitField.Flags.ManageChannels,
 							PermissionsBitField.Flags.ManageMessages,
-							PermissionsBitField.Flags.EmbedLinks,
 							PermissionsBitField.Flags.ReadMessageHistory,
 							PermissionsBitField.Flags.ManageThreads,
+							PermissionsBitField.Flags.MentionEveryone,
 							PermissionsBitField.Flags.AttachFiles,
 							PermissionsBitField.Flags.AddReactions
 						],
@@ -173,11 +181,16 @@ async execute(interaction, client) {
 						id: staffRole.id, // Set the permissions for the newly created role
 						allow: [
 							PermissionsBitField.Flags.ViewChannel,
-							PermissionsBitField.Flags.ManageChannels,
-							PermissionsBitField.Flags.ManageMessages,
 							PermissionsBitField.Flags.EmbedLinks,
 							PermissionsBitField.Flags.ReadMessageHistory,
+							PermissionsBitField.Flags.ViewChannel,
+							PermissionsBitField.Flags.PinMessages,
+							PermissionsBitField.Flags.SendMessages,
+							PermissionsBitField.Flags.ManageChannels,
+							PermissionsBitField.Flags.ManageMessages,
+							PermissionsBitField.Flags.ReadMessageHistory,
 							PermissionsBitField.Flags.ManageThreads,
+							PermissionsBitField.Flags.MentionEveryone,
 							PermissionsBitField.Flags.AttachFiles,
 							PermissionsBitField.Flags.AddReactions
 						],
