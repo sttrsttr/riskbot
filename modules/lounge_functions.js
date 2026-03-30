@@ -30,15 +30,12 @@ async function updateSettingVoteMessage(guild, thread, threadmeta) {
     const postData3 = JSON.stringify({
         playercount: threadmeta.lobbysize,
         gametype: threadmeta.lobbytype,
+        dicemode: threadmeta.dicemode,
         gamemode: threadmeta.gamemode
     });
 
-    console.log(postData3);
-
     const output3 = await httpsPostRequest(options3, postData3);
     const settingpool = JSON.parse(output3);
-
-    console.log(settingpool);
 
     // Create a setting vote message with embedded setting images and a dropdown action to select one of three setting items
 
@@ -159,6 +156,7 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
     }
 
     if (threadmeta.playercount >= threadmeta.lobbysize) {
+
         await joinmessage.edit({ content: `${emote} Lounge game is now full! ${emote}\n\n- Players:\n${playerlistmsg}- ELO requirement: ${threadmeta.elolimit}\n\n`, components: [] });
         await welcomeMessage.delete();
     } else {
@@ -168,7 +166,7 @@ async function updateLoungeMessages(guild, thread, threadmeta) {
             buttonlabel = buttonlabel + ` (Only ${threadmeta.gamemode.toUpperCase()})`;
         }
 
-        await joinmessage.edit({ content: `${emote} New ${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge game created ${emote}\n\n- Players:\n${playerlistmsg}- Game mode: ${threadmeta.gamemode}\n- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel(buttonlabel).setStyle(buttonstyle))] });
+        await joinmessage.edit({ content: `${emote} New ${threadmeta.lobbysize}P ${threadmeta.lobbytype} Lounge game created ${emote}\n\n- Players:\n${playerlistmsg}- Game mode: ${threadmeta.gamemode}\n- Dice: ${threadmeta.dicemode}\n- ELO requirement: ${threadmeta.elolimit}\n - Status: ${threadmeta.lobbysize - threadmeta.playercount} spots remaining\n\nUse the button below to join the game.\n`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_lounge_game').setLabel(buttonlabel).setStyle(buttonstyle))] });
     }
 
 }
@@ -360,5 +358,6 @@ async function removeLoungeMember(guild, thread, userid) {
 module.exports = {
     addLoungeMember,
     removeLoungeMember,
+    updateLoungeMessages,
     updateSettingVoteMessage,
 };

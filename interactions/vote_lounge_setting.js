@@ -104,7 +104,7 @@ module.exports = async (interaction) => {
         .addComponents(
             new StringSelectMenuBuilder()
                 .setCustomId('vote_lounge_winner')
-                .setPlaceholder('Vote for the outcome of the game')
+                .setPlaceholder('Who won the game?')
                 .addOptions(settingOptions)
         );
 

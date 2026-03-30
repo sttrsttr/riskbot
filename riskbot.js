@@ -342,7 +342,7 @@ client.on('threadMembersUpdate', async (newMembers, oldMembers, thread) => {
 	oldMembers.forEach((member) => {
 		if (!newMembers.has(member.id)) {
 			// User has left the thread
-			console.log(`User ${member.id} left thread ${thread.id}`);
+			//console.log(`User ${member.id} left thread ${thread.id}`);
 			removeLoungeMember(serverid, thread.id, member.id);
 		}
 	});

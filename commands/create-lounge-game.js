@@ -1,6 +1,6 @@
 // createAnonymousEvent.js
 const { SlashCommandBuilder, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, AttachmentBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
-const { addLoungeMember } = require('../modules/lounge_functions.js');
+const { addLoungeMember, updateLoungeMessages } = require('../modules/lounge_functions.js');
 const { httpsPostRequest, httpsGetRequest } = require('../modules/helperfunctions.js');
 
 
@@ -44,6 +44,16 @@ module.exports = {
                     { name: 'Secret Missions', value: 'secret' },
                 )
         )
+        .addStringOption(option =>
+            option.setName('dice')
+                .setDescription('Dice type to draw settings from')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Mix of both', value: 'ANY' },
+                    { name: 'Balanced Blitz only', value: 'bb' },
+                    { name: 'True Random only', value: 'tr' },
+                )
+        )
         .addIntegerOption(option =>
             option.setName('min_elo_limit')
                 .setDescription('Minimum ELO requirement (default 0)')
@@ -69,6 +79,7 @@ module.exports = {
             const player_count = interaction.options.getInteger('player_count');
             const mode = interaction.options.getString('mode');
             const type = interaction.options.getString('type');
+            const dice = interaction.options.getString('dice');
             const min_elo_limit = interaction.options.getInteger('min_elo_limit') || 0;
 
             if ((type == "Competitive" || type == "Casual") && player_count == 3) {
@@ -111,7 +122,8 @@ module.exports = {
             }
 
             const guild = await client.guilds.fetch(interaction.guild.id);
-            const channel = await guild.channels.fetch(interaction.channelId);
+            let channel = await guild.channels.fetch(interaction.channelId);
+
             const botMember = guild.members.me;
             if (!botMember.permissions.has('ManageChannels')) {
                 await interaction.followUp({ content: `Sorry, I don't have permission to manage channels.`, flags: 64 });
@@ -123,8 +135,10 @@ module.exports = {
                 return;
             }
 
+            const mainloungechannel = await guild.channels.fetch(global.config.main_lounge_channel);
+
             // Create a thread
-            const thread = await channel.threads.create({
+            const thread = await mainloungechannel.threads.create({
                 name: nickname + '-' + type + '-' + player_count + 'p-lounge-game',
                 type: ChannelType.PrivateThread,
                 autoArchiveDuration: 10080,
@@ -162,6 +176,7 @@ module.exports = {
                 welcomemessageid: welcomemessage.id,
                 player: interaction.user.id,
                 lobby_type: type,
+                dicetype: dice,
                 game_mode: mode,
                 elolimit: min_elo_limit,
                 lobbysize: player_count,
@@ -171,6 +186,73 @@ module.exports = {
 
             // Add the interaction user to the staff thread
             await addLoungeMember(guild, thread, interaction.user.id);
+
+            if (channel.id == global.config.invite_lounge_channel) {
+
+                // Invitational channel, so lets wait 5 minutes before we post the game to the main lounge channel
+                // global.config.main_lounge_channel
+                
+                setTimeout(async () => {
+                    if (mainloungechannel) {
+
+                        // Get thread meta info
+                        const options = {
+                            hostname: 'friendsofrisk.com',
+                            path: '/m2mapi/getloungegame',
+                            method: 'POST',
+                            headers: {
+                                'X-API-KEY': global.config.for_api_key
+                            }
+                        };
+
+                        const postData = JSON.stringify({
+                            threadid: thread.id
+                        });
+
+                        const output = await httpsPostRequest(options, postData);
+
+                        let threadmeta = JSON.parse(output).gamedata;
+
+                        // Verify that there are free spots
+                        if (threadmeta.playercount >= threadmeta.lobbysize) {
+                            return;
+                        }
+
+                        console.log('Moving to main channel');
+                        const joinmessage = await channel.messages.fetch(threadmeta.joinmessageid);
+                        await joinmessage.edit({ content: `Lounge game moved to main channel since it didnt fill...`, components: [] });
+
+                        const second_join_message = await mainloungechannel.send({ content: `New ${player_count}P ${type} Lounge game created.\n<@&${pingrole}>` });
+
+                        threadmeta.channelid = mainloungechannel.id;
+                        threadmeta.joinmessageid = second_join_message.id;
+
+                        // Update join message ID in database
+                        const options5 = {
+                            hostname: 'friendsofrisk.com',
+                            path: '/m2mapi/updateloungegame',
+                            method: 'POST',
+                            headers: {
+                                'X-API-KEY': global.config.for_api_key
+                            }
+                        };
+
+                        const postData5 = JSON.stringify({
+                            threadid: thread.id,
+                            channelid: mainloungechannel.id,
+                            joinmessageid: second_join_message.id
+                        });
+
+                        console.log('Sending update message to FoR...');
+                        const output5 = await httpsPostRequest(options5, postData5);
+                        await updateLoungeMessages(guild, thread, threadmeta);
+
+
+                    }
+                }, 30 * 1 * 1000); // 1 minute
+            }
+
+
         } catch (error) {
             console.error(error);
             await interaction.followUp({ content: 'Error creating thread.', flags: 64 });
