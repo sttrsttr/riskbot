@@ -197,40 +197,22 @@ async function pingstaff(message, client) {
             if (err) throw err;
         });
 
-        let sql = "SELECT 1 FROM `" + global.config.mysql_database + "`.`eventmanager__pinglog` WHERE `channelid` = " + message.channel.id + " AND `command` = 'pingstaff' AND `validfrom` > DATE_ADD(NOW(), INTERVAL -4 MINUTE)";
-        const history = await new Promise((resolve, reject) => {
+        sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__events` WHERE `mainchannel` = " + message.channel.parentId + " OR `helpchannel` = " + message.channel.id + " OR `textchannel` = " + message.channel.id + "";
+        const events = await new Promise((resolve, reject) => {
             con.query(sql, function (err, result) {
                 if (err) reject(err);
                 resolve(result);
             });
         });
-        if (history.length == 0) {
+        const event = events[0];
 
-            sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__events` WHERE `mainchannel` = " + message.channel.parentId + " OR `helpchannel` = " + message.channel.id + " OR `textchannel` = " + message.channel.id + "";
-            const events = await new Promise((resolve, reject) => {
-                con.query(sql, function (err, result) {
-                    if (err) reject(err);
-                    resolve(result);
-                });
-            });
-            const event = events[0];
+        if (event) {
+            const guild = await client.guilds.resolve(event.serverid);
+            const channel = await guild.channels.fetch(message.channel.id);
+            const role = await guild.roles.fetch(event.staffrole);
 
-            if (event) {
-                const guild = await client.guilds.resolve(event.serverid);
-                const channel = await guild.channels.fetch(message.channel.id);
-                const role = await guild.roles.fetch(event.staffrole);
-                await channel.send(`<@${message.author.id}> summons <@&${role.id}>`);
+            await channel.send(`<@${message.author.id}> please use the /staff command instead, because Discord dont allow us to use !staff any more.`);
 
-                sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__pinglog` VALUES (NULL,NOW()," + message.channel.id + "," + message.author.id + ",'pingstaff')";
-                const insert = await new Promise((resolve, reject) => {
-                    con.query(sql, function (err, result) {
-                        if (err) reject(err);
-                        resolve(result);
-                    });
-                });
-
-
-            }
         }
 
         con.end();

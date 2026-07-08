@@ -13,14 +13,8 @@ const commandsmainserver = [];
 // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
 for (const file of commandFiles) {
 	const command = require(`./commands/${file}`);
-	if (file == "roleremove.js" || file == "karma.js") {
+	if (file == "roleremove.js") {
 		commandsmainserver.push(command.data.toJSON());
-	} else if (file == "ffa-result.js") {
-		commandsdev.push(command.data.toJSON());
-	} else if (file == "1v1-result.js") {
-		commandsmainserver.push(command.data.toJSON());
-	} else if (file == "1v1-top10.js") {
-		commandsmainserver.push(command.data.toJSON());		
 	} else if (file == "create-lounge-game.js") {
 		commandsmainserver.push(command.data.toJSON());
 	} else if (file == "eventlabs-create.js") {
@@ -39,6 +33,12 @@ const rest = new REST({ version: '10' }).setToken(token);
 		console.log(`Started refreshing all application (/) commands.`);
 
 		for (const guild in guilds) {
+
+			// Empty the commands for the guild first, to avoid duplicates
+			await rest.put(
+				Routes.applicationGuildCommands(clientId, guilds[guild]),
+				{ body: [] },
+			);
 
 			let commandload = commands;
 			if (guild == "MAIN") {
