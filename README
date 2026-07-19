@@ -11,18 +11,20 @@ Create an riskbot_config.json file with the following content:
 (a lot of commands needs access to the closed M2M API at Friends of Risk to work)
 (edit deply-commands.js accordingly to your server and command needs)
 
+```json
 {
-"token": "",
-"clientId": "",
-"guilds": {
+  "token": "",
+  "clientId": "",
+  "guilds": {
     "GMARENA": "776142718425497640",
     "RISKDEV": "796769248444809266",
     "MAIN": "465846009164070912",
     "RETRYGAMES": "681626969670156320",
-},
-"for_api_key":
-"mainserver_noevents_role":
-
+  },
+  "for_api_key": "",
+  "mainserver_noevents_role": ""
+}
+```
 
 To make the bot run continuisuly use one of two recommended strategies:
 
@@ -33,11 +35,8 @@ A) Set up pm2
     pm2 startup
     pm2 save
 
-or 
+or
 
 B) Set up CRON-JOB to restart bot every 24 hours, add this line to your user crontab: (if you dont run on a linux server, there may be other tools than cron to handle this)
-	
+
 	1 15 * * * sh reboot_riskbot.sh
-
-
-}
