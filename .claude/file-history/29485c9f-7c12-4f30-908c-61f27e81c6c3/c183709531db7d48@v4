@@ -622,19 +622,40 @@ async function updateSignupStatus(client, eventid, status) {
             return "INVALID_STATUS";
         }
 
-        // Resolve the event via the API. The website already persists the new
-        // signupstatus, so no database access is needed here.
-        const res = await httpsGetRequest({
-            hostname: 'friendsofrisk.com',
-            path: '/openapi/getEvents',
-            method: 'GET',
+        // Connect to SQL database
+        var con = mysql.createConnection({
+            host: global.config.mysql_host,
+            user: global.config.mysql_username,
+            password: global.config.mysql_password,
+            supportBigNumbers: true,
+            bigNumberStrings: true
         });
-        const events = JSON.parse(res);
-        const event = events.find(e => String(e.id) === String(eventid));
+        con.connect(function (err) {
+            if (err) throw err;
+        });
+
+        let sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__events` WHERE `id` = " + eventid + "";
+        const events = await new Promise((resolve, reject) => {
+            con.query(sql, function (err, result) {
+                if (err) reject(err);
+                resolve(result);
+            });
+        });
+        const event = events[0];
 
         if (!event) {
+            con.end();
             return "EVENT_NOT_FOUND";
         }
+
+        // Persist the new status so the signup button behaves correctly
+        sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__events` SET `signupstatus` = '" + status + "' WHERE `id` = " + eventid + "";
+        await new Promise((resolve, reject) => {
+            con.query(sql, function (err, result) {
+                if (err) reject(err);
+                resolve(result);
+            });
+        });
 
         const guild = await client.guilds.resolve(event.serverid);
         const channel = await guild.channels.fetch(event.signupchannel);
@@ -650,11 +671,6 @@ async function updateSignupStatus(client, eventid, status) {
             .setCustomId('rulesinfo')
             .setLabel('Rules and info')
             .setStyle(ButtonStyle.Primary);
-
-        const contactstaff = new ButtonBuilder()
-            .setCustomId('contactstaff')
-            .setLabel('Contact staff')
-            .setStyle(ButtonStyle.Danger);
 
         const row = new ActionRowBuilder();
 
@@ -673,11 +689,13 @@ async function updateSignupStatus(client, eventid, status) {
             row.addComponents(signup);
         }
 
-        row.addComponents(availability, rules, contactstaff);
+        row.addComponents(availability, rules);
 
         const content = `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: ${status}`;
 
         await message.edit({ content: content, components: [row] });
+
+        con.end();
 
         return "SUCCESS";
 

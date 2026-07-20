@@ -36,7 +36,6 @@ const {
 	pingstaff,
 	pingparticipants,
 	updateEventChannelIds,
-	updateSignupStatus,
 	getAllowedChannelIds,
 	getChatChannelIds,
 	getAnnouncementChannelsIds
@@ -190,7 +189,7 @@ client.on('guildMemberAdd', async (member) => {
 
 // Listen for any commands
 client.on(Events.InteractionCreate, async interaction => {
-	if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
+	if (interaction.isButton() || interaction.isStringSelectMenu()) {
 		const handler = buttonHandlers.get(interaction.customId);
 		if (handler) {
 			try {
@@ -707,19 +706,6 @@ app.post('/api/swapusers', async (req, res) => {
 		res.status(500).send({ error: "An error occurred during thread creation" });
 	}
 
-})
-
-// API Endpoint for updating the signup status of an event
-app.post('/api/updatesignupstatus', async (req, res) => {
-	try {
-		let post = req.body;
-		let output = await updateSignupStatus(client, post.eventid, post.status);
-		res.header("Content-Type", 'application/json');
-		res.send(JSON.stringify(output, null, 4));
-	} catch (error) {
-		console.error('Error in updating signup status:', error);
-		res.status(500).send({ error: "An error occurred during signup status update" });
-	}
 })
 
 app.listen(port, () => {

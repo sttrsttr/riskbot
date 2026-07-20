@@ -651,11 +651,6 @@ async function updateSignupStatus(client, eventid, status) {
             .setLabel('Rules and info')
             .setStyle(ButtonStyle.Primary);
 
-        const contactstaff = new ButtonBuilder()
-            .setCustomId('contactstaff')
-            .setLabel('Contact staff')
-            .setStyle(ButtonStyle.Danger);
-
         const row = new ActionRowBuilder();
 
         // Add the signup button depending on the new status (no button when CLOSED)
@@ -673,7 +668,7 @@ async function updateSignupStatus(client, eventid, status) {
             row.addComponents(signup);
         }
 
-        row.addComponents(availability, rules, contactstaff);
+        row.addComponents(availability, rules);
 
         const content = `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: ${status}`;
 

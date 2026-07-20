@@ -298,17 +298,9 @@ async function pingwaitlist(client, thread) {
 }
 
 
-async function signupHandler(interaction, client) {
-
-    // Allow this handler to run as a button interaction without an explicit client argument
-    client = client || global.client;
+async function signupHandler(message, client) {
 
     try {
-
-        // Acknowledge the button press with an ephemeral message so only the user sees the replies
-        await interaction.reply({ content: `Please stand by while I sign you up...`, flags: 64 });
-
-        const userid = interaction.user.id;
 
         // Connect to SQL database
         var con = mysql.createConnection({
@@ -323,7 +315,7 @@ async function signupHandler(interaction, client) {
         });
 
 
-        let sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__events` WHERE `signupchannel` = " + interaction.channelId + "";
+        let sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__events` WHERE `signupchannel` = " + message.channelId + "";
         const events = await new Promise((resolve, reject) => {
             con.query(sql, function (err, result) {
                 if (err) reject(err);
@@ -334,9 +326,9 @@ async function signupHandler(interaction, client) {
 
         if (event) {
             const guild = await client.guilds.resolve(event.serverid);
-            const member = await guild.members.fetch(userid);
+            const member = await guild.members.fetch(message.author.id);
 
-            sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__signups` WHERE `eventid` = " + event.id + " AND `playerid` = " + userid + "";
+            sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__signups` WHERE `eventid` = " + event.id + " AND `playerid` = " + message.author.id + "";
             const signedup = await new Promise((resolve, reject) => {
                 con.query(sql, function (err, result) {
                     if (err) reject(err);
@@ -345,7 +337,7 @@ async function signupHandler(interaction, client) {
             });
             if (signedup.length > 0) {
 
-                sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__signups` WHERE `eventid` = " + event.id + " AND `playerid` = " + userid + " AND `repeated_myself` > DATE_ADD(NOW(), INTERVAL -1 DAY)";
+                sql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__signups` WHERE `eventid` = " + event.id + " AND `playerid` = " + message.author.id + " AND `repeated_myself` > DATE_ADD(NOW(), INTERVAL -1 DAY)";
                 const notify = await new Promise((resolve, reject) => {
                     con.query(sql, function (err, result) {
                         if (err) reject(err);
@@ -354,9 +346,9 @@ async function signupHandler(interaction, client) {
                 });
                 if (notify.length == 0) {
 
-                    await interaction.followUp({ content: `You have already signed up for ${event.name}`, flags: 64 });
+                    await message.reply(`You have already signed up for ${event.name}`);
 
-                    sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__signups` SET `repeated_myself` = NOW() WHERE `eventid` = " + event.id + " AND `playerid` = " + userid + "";
+                    sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__signups` SET `repeated_myself` = NOW() WHERE `eventid` = " + event.id + " AND `playerid` = " + message.author.id + "";
                     const repated = await new Promise((resolve, reject) => {
                         con.query(sql, function (err, result) {
                             if (err) reject(err);
@@ -364,7 +356,7 @@ async function signupHandler(interaction, client) {
                         });
                     });
                 } else {
-                    console.log(`Already notified ${userid}`);
+                    console.log(`Already notified ${message.author.id}`);
                 }
 
             } else {
@@ -399,14 +391,14 @@ async function signupHandler(interaction, client) {
                         "Oh no, just missed it! Maybe next time? 🤖"
                     ];
 
-                    await interaction.followUp({ content: responses[Math.floor(Math.random() * responses.length)], flags: 64 });
+                    await message.reply(responses[Math.floor(Math.random() * responses.length)]);
 
                 } else {
 
 
                     let availerror = 0;
 
-                    let blsql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__blacklists` WHERE `eventid` = " + event.id + " AND `playerid` = " + userid + " AND `validto` IS NULL";
+                    let blsql = "SELECT * FROM `" + global.config.mysql_database + "`.`eventmanager__blacklists` WHERE `eventid` = " + event.id + " AND `playerid` = " + message.author.id + " AND `validto` IS NULL";
                     const blacklisted = await new Promise((resolve, reject) => {
                         con.query(blsql, function (err, result) {
                             if (err) reject(err);
@@ -414,12 +406,12 @@ async function signupHandler(interaction, client) {
                         });
                     });
                     if (blacklisted.length > 0) {
-                        await interaction.followUp({ content: `You are not able to sign up for ${event.name}. Please contact event staff if you have any questions.`, flags: 64 });
+                        await message.reply(`You are not able to sign up for ${event.name}. Please contact event staff if you have any questions.`);
                     } else {
 
 
 
-                        sql = "SELECT 1 FROM `" + global.config.mysql_database + "`.`users` u WHERE u.`discordid` = " + userid + "";
+                        sql = "SELECT 1 FROM `" + global.config.mysql_database + "`.`users` u WHERE u.`discordid` = " + message.author.id + "";
                         const exists = await new Promise((resolve, reject) => {
                             con.query(sql, function (err, result) {
                                 if (err) reject(err);
@@ -462,7 +454,7 @@ async function signupHandler(interaction, client) {
 
                         if (event.requireavailability == 1 && availerror == 0) {
 
-                            sql = "SELECT 1 FROM `" + global.config.mysql_database + "`.`users` u INNER JOIN `" + global.config.mysql_database + "`.`user__availability` ua ON u.`id` = ua.`userid` AND u.`discordid` = " + userid + "";
+                            sql = "SELECT 1 FROM `" + global.config.mysql_database + "`.`users` u INNER JOIN `" + global.config.mysql_database + "`.`user__availability` ua ON u.`id` = ua.`userid` AND u.`discordid` = " + message.author + "";
                             const availability = await new Promise((resolve, reject) => {
                                 con.query(sql, function (err, result) {
                                     if (err) reject(err);
@@ -483,7 +475,7 @@ async function signupHandler(interaction, client) {
                             if (event.badgerequired > 0) {
                                 // Check for badges
 
-                                sql = "SELECT * FROM `" + global.config.mysql_database + "`.`user__merits` um INNER JOIN `" + global.config.mysql_database + "`.`users` u ON u.`id` = um.`userid` AND um.`validto` IS NULL AND um.`merit` = " + event.badgerequired + " AND u.`discordid` = " + userid + "";
+                                sql = "SELECT * FROM `" + global.config.mysql_database + "`.`user__merits` um INNER JOIN `" + global.config.mysql_database + "`.`users` u ON u.`id` = um.`userid` AND um.`validto` IS NULL AND um.`merit` = " + event.badgerequired + " AND u.`discordid` = " + message.author + "";
                                 const hasbadge = await new Promise((resolve, reject) => {
                                     con.query(sql, function (err, result) {
                                         if (err) reject(err);
@@ -509,7 +501,7 @@ async function signupHandler(interaction, client) {
                                 });
                                 const badgeinfo = badgeres[0];
 
-                                await interaction.followUp({ content: `I am so sorry, but it does not look like you have the required FoR badge ${badgeinfo.name} that is required to sign up for this tourney.\nHow to get this badge:\n1) Link your Risk Friend ID to your FoR profile\n2) ${badgeinfo.description}\n3) Wait up to 24 hours for badges to be awarded or contact staff`, flags: 64 });
+                                await message.reply(`I am so sorry, but it does not look like you have the required FoR badge ${badgeinfo.name} that is required to sign up for this tourney.\nHow to get this badge:\n1) Link your Risk Friend ID to your FoR profile\n2) ${badgeinfo.description}\n3) Wait up to 24 hours for badges to be awarded or contact staff`);
 
                             } else {
 
@@ -517,16 +509,16 @@ async function signupHandler(interaction, client) {
                                 const chatthread = await guild.channels.fetch(event.textchannel);
 
                                 if (helpthread.type === ChannelType.PublicThread || helpthread.type === ChannelType.PrivateThread || helpthread.type === ChannelType.AnnouncementThread) {
-                                    helpthread.members.add(member).catch(err => console.error(`Could not add ${member.id} to help thread ${event.helpchannel}: ${err.message}`));
+                                    helpthread.members.add(member);
                                 }
 
                                 if (chatthread.type === ChannelType.PublicThread || chatthread.type === ChannelType.PrivateThread || chatthread.type === ChannelType.AnnouncementThread) {
-                                    chatthread.members.add(member).catch(err => console.error(`Could not add ${member.id} to chat thread ${event.textchannel}: ${err.message}`));
+                                    chatthread.members.add(member);
                                 }
 
                                 const randomMessage = getRandomWelcomeMessage();
                                 if (event.signupstatus == 'WAITLIST') {
-                                    sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__signups` VALUES (NULL," + event.id + "," + userid + ",NOW(),NULL,NOW(),NULL,NULL,1,NULL,1)";
+                                    sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__signups` VALUES (NULL," + event.id + "," + message.author + ",NOW(),NULL,NOW(),NULL,NULL,1,NULL,1)";
                                     if (event.participantrole) {
                                         const participantrole = await guild.roles.fetch(event.participantrole);
                                         if (participantrole) {
@@ -540,7 +532,7 @@ async function signupHandler(interaction, client) {
                                         }
                                     }
                                 } else {
-                                    sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__signups` VALUES (NULL," + event.id + "," + userid + ",NOW(),NULL,NULL,NULL,NULL,1,NULL,1)";
+                                    sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__signups` VALUES (NULL," + event.id + "," + message.author + ",NOW(),NULL,NULL,NULL,NULL,1,NULL,1)";
                                     if (event.participantrole) {
                                         const participantrole = await guild.roles.fetch(event.participantrole);
                                         if (participantrole) {
@@ -564,14 +556,14 @@ async function signupHandler(interaction, client) {
                                 });
                                 if (signup) {
                                     if (event.signupstatus == 'WAITLIST') {
-                                        await interaction.followUp({ content: `You are now put on the waiting list for ${event.name}. You will be pinged if there is an opening for you. View all signups at https://friendsofrisk.com/eventmanager/${event.id}/`, flags: 64 });
+                                        await message.reply(`You are now put on the waiting list for ${event.name}. You will be pinged if there is an opening for you. View all signups at https://friendsofrisk.com/eventmanager/${event.id}/`);
                                     } else {
-                                        await interaction.followUp({ content: `You are now signed up for ${event.name}. ${randomMessage} View all signups at https://friendsofrisk.com/eventmanager/${event.id}/`, flags: 64 });
+                                        await message.reply(`You are now signed up for ${event.name}. ${randomMessage} View all signups at https://friendsofrisk.com/eventmanager/${event.id}/`);
                                     }
-                                    sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + userid + "," + event.id + ",NOW(),'Signed up','Using Discord',NULL,NULL)";
+                                    sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + message.author + "," + event.id + ",NOW(),'Signed up','Using Discord',NULL,NULL)";
                                     await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
                                 } else {
-                                    await interaction.followUp({ content: `There was a problem signing you up... please ask for help`, flags: 64 });
+                                    await message.reply(`There was a problem signing you up... please ask for help`);
                                 }
 
                             }
@@ -579,7 +571,7 @@ async function signupHandler(interaction, client) {
 
                         } else {
 
-                            sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__signups_failed` VALUES (NULL," + event.id + "," + userid + ",NOW())";
+                            sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__signups_failed` VALUES (NULL," + event.id + "," + message.author + ",NOW())";
                             await new Promise((resolve, reject) => {
                                 con.query(sql, function (err, result) {
                                     if (err) reject(err);
@@ -594,7 +586,7 @@ async function signupHandler(interaction, client) {
 
                             const row = new ActionRowBuilder()
                                 .addComponents(confirm);
-                            await interaction.followUp({ content: `Oops! You don't have any availability set up at friendsofrisk.com. Please click this button to complete your sign up`, components: [row], flags: 64 });
+                            await message.reply({ content: `Oops! You don't have any availability set up at friendsofrisk.com. Please click this button to complete your sign up`, components: [row] });
                         }
                     }
                 }
@@ -610,83 +602,6 @@ async function signupHandler(interaction, client) {
 
 
 
-
-
-async function updateSignupStatus(client, eventid, status) {
-
-    try {
-
-        // Only allow the three known signup statuses
-        const validStatuses = ['OPEN', 'WAITLIST', 'CLOSED'];
-        if (!validStatuses.includes(status)) {
-            return "INVALID_STATUS";
-        }
-
-        // Resolve the event via the API. The website already persists the new
-        // signupstatus, so no database access is needed here.
-        const res = await httpsGetRequest({
-            hostname: 'friendsofrisk.com',
-            path: '/openapi/getEvents',
-            method: 'GET',
-        });
-        const events = JSON.parse(res);
-        const event = events.find(e => String(e.id) === String(eventid));
-
-        if (!event) {
-            return "EVENT_NOT_FOUND";
-        }
-
-        const guild = await client.guilds.resolve(event.serverid);
-        const channel = await guild.channels.fetch(event.signupchannel);
-        const message = await channel.messages.fetch(event.signupmessage);
-
-        // Rebuild the self service buttons (same as create-event)
-        const availability = new ButtonBuilder()
-            .setCustomId('availability')
-            .setLabel('Set up your availability')
-            .setStyle(ButtonStyle.Primary);
-
-        const rules = new ButtonBuilder()
-            .setCustomId('rulesinfo')
-            .setLabel('Rules and info')
-            .setStyle(ButtonStyle.Primary);
-
-        const contactstaff = new ButtonBuilder()
-            .setCustomId('contactstaff')
-            .setLabel('Contact staff')
-            .setStyle(ButtonStyle.Danger);
-
-        const row = new ActionRowBuilder();
-
-        // Add the signup button depending on the new status (no button when CLOSED)
-        if (status == 'OPEN') {
-            const signup = new ButtonBuilder()
-                .setCustomId('signup')
-                .setLabel('Sign up')
-                .setStyle(ButtonStyle.Success);
-            row.addComponents(signup);
-        } else if (status == 'WAITLIST') {
-            const signup = new ButtonBuilder()
-                .setCustomId('signup')
-                .setLabel('Join waitlist')
-                .setStyle(ButtonStyle.Success);
-            row.addComponents(signup);
-        }
-
-        row.addComponents(availability, rules, contactstaff);
-
-        const content = `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: ${status}`;
-
-        await message.edit({ content: content, components: [row] });
-
-        return "SUCCESS";
-
-    } catch (error) {
-        // Handle errors
-        console.error("Error:", error);
-        return "ERROR";
-    }
-}
 
 
 async function eventmanagerCheckinStart(client) {
@@ -1727,7 +1642,6 @@ module.exports = {
     eventmanagerCheckinStart,
     eventmanagerCheckinStop,
     signupHandler,
-    updateSignupStatus,
     addThreadMember,
     availabilityMessage,
     getAllowedChannelIds: () => allowedChannelIds,

@@ -36,7 +36,7 @@ const {
 	pingstaff,
 	pingparticipants,
 	updateEventChannelIds,
-	updateSignupStatus,
+	signupHandler,
 	getAllowedChannelIds,
 	getChatChannelIds,
 	getAnnouncementChannelsIds
@@ -190,7 +190,7 @@ client.on('guildMemberAdd', async (member) => {
 
 // Listen for any commands
 client.on(Events.InteractionCreate, async interaction => {
-	if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
+	if (interaction.isButton() || interaction.isStringSelectMenu()) {
 		const handler = buttonHandlers.get(interaction.customId);
 		if (handler) {
 			try {
@@ -244,7 +244,11 @@ client.on('messageCreate', async (message) => {
 	if (!message.author.bot && !message.system) {
 		const contentorig = message.content.trim();
 		const content = contentorig.toLowerCase();
-		if (announcementChannelsIds.includes(message.channel.id) && !content.includes('(noping)')) {
+		if (allowedChannelIds.includes(message.channel.id)) {
+			if (content.includes('signup') || content.includes('sign in') || content.includes('sign up') || content.includes('singup') || content.includes('sing up') || content.includes('sign me up') || content.includes('join') || content.includes('register') || content == '✅' || content == '👍') {
+				signupHandler(message, client);
+			}
+		} else if (announcementChannelsIds.includes(message.channel.id) && !content.includes('(noping)')) {
 			pingparticipants(message, client);
 		} else if (chatChannelIds.includes(message.channel.id) || chatChannelIds.includes(message.channel.parentId)) {
 			if (content.includes('change my availability') || content.includes('update my availability') || content.includes('from my availability') || content.includes('in my availability') || content.includes('update availability') || content.includes('change availability') || content.includes('availability update') || content.includes('to my availability')) {
@@ -707,19 +711,6 @@ app.post('/api/swapusers', async (req, res) => {
 		res.status(500).send({ error: "An error occurred during thread creation" });
 	}
 
-})
-
-// API Endpoint for updating the signup status of an event
-app.post('/api/updatesignupstatus', async (req, res) => {
-	try {
-		let post = req.body;
-		let output = await updateSignupStatus(client, post.eventid, post.status);
-		res.header("Content-Type", 'application/json');
-		res.send(JSON.stringify(output, null, 4));
-	} catch (error) {
-		console.error('Error in updating signup status:', error);
-		res.status(500).send({ error: "An error occurred during signup status update" });
-	}
 })
 
 app.listen(port, () => {

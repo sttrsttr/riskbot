@@ -1,0 +1,24 @@
+{
+  "firstStartTime": "2026-07-20T16:31:18.607Z",
+  "machineID": "f994a8ce8e059d58d7d87526ff9e12c441dc78345feca608519923a527d06efd",
+  "opusProMigrationComplete": true,
+  "sonnet1m45MigrationComplete": true,
+  "seenNotifications": {},
+  "hasResetAutoModeOptInForDefaultOffer": true,
+  "migrationVersion": 13,
+  "userID": "5592c15140e9c21faf443676d77799b597532546b02b97c44f0b57c7aad37be1",
+  "projects": {
+    "/home/riskbot": {
+      "allowedTools": [],
+      "mcpContextUris": [],
+      "mcpServers": {},
+      "enabledMcpjsonServers": [],
+      "disabledMcpjsonServers": [],
+      "hasTrustDialogAccepted": false,
+      "projectOnboardingSeenCount": 0,
+      "hasClaudeMdExternalIncludesApproved": false,
+      "hasClaudeMdExternalIncludesWarningShown": false,
+      "hasUnseenTeamArtifacts": false
+    }
+  }
+}

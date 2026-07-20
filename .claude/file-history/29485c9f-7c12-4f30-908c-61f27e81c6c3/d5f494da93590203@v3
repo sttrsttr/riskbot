@@ -190,7 +190,7 @@ client.on('guildMemberAdd', async (member) => {
 
 // Listen for any commands
 client.on(Events.InteractionCreate, async interaction => {
-	if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
+	if (interaction.isButton() || interaction.isStringSelectMenu()) {
 		const handler = buttonHandlers.get(interaction.customId);
 		if (handler) {
 			try {

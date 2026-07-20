@@ -1,0 +1,40 @@
+var mysql = require('mysql2');
+
+module.exports = async (interaction) => {
+
+    const userid = interaction.user.id;
+	const channelid = interaction.message.channelId;
+	const messageid = interaction.message.id;
+
+    		try {
+
+				// getEvent
+				const options2 = {
+					hostname: 'friendsofrisk.com',
+					path: '/openapi/getEvent',
+					method: 'POST',
+				};
+
+				const postData2 = JSON.stringify({
+					mainchannelid: channelid
+				});
+
+
+            const res2 = await httpsPostRequest(options2, postData2);
+            const events = JSON.parse(res2);
+            const event = events[0];
+
+            if (event) {
+
+				
+
+			} else {
+				await interaction.reply({ content: "Error, please try again later", flags: 64 });
+			}
+			con.end();
+		} catch (error) {
+			console.error(error);
+			await interaction.reply({ content: "Error, please try again later", flags: 64 });
+		}
+
+};

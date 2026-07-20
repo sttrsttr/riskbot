@@ -250,13 +250,8 @@ async execute(interaction, client) {
 						.setLabel('Rules and info')
 						.setStyle(ButtonStyle.Primary);
 
-					const contactstaff = new ButtonBuilder()
-						.setCustomId('contactstaff')
-						.setLabel('Contact staff')
-						.setStyle(ButtonStyle.Danger);
-
 					const row = new ActionRowBuilder()
-						.addComponents(availability, rules, contactstaff);
+						.addComponents(availability, rules);
 
 					const signupmessageid = await signupchannel.send({ content: `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: CLOSED`, components: [row] });
 

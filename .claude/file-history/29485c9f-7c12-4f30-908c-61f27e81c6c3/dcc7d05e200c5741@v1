@@ -57,7 +57,7 @@ async execute(interaction, client) {
 
 		try {
 
-			let sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events` VALUES (NULL,'NORMAL','"+ eventname +"',"+ interaction.user.id +",NOW(),NULL,NULL,NULL,"+ guild.id +",1,'CLOSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,1,0,0,0,1,0,0,0,1)";
+			let sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events` VALUES (NULL,'NORMAL','"+ eventname +"',"+ interaction.user.id +",NOW(),NULL,NULL,"+ guild.id +",1,'CLOSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,1,0,0,0,1,0,0,0,1)";
 			let result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -214,7 +214,7 @@ async execute(interaction, client) {
 
 
 			const signupchannel = await channel.threads.create({
-				name: "📝 commands",
+				name: "📝 signup",
 				icon: "📝",
 				type: ChannelType.PublicThread,
 				autoArchiveDuration: 10080,
@@ -245,30 +245,10 @@ async execute(interaction, client) {
 			staffchannel.members.add(interactionUser.id);	
 
 			await staffchannel.send(`This will be your staff thread, where only event staff will have access`);
+			await signupchannel.send(`### Signups are currently closed. Please check back later.`);
 
 
-			const availability = new ButtonBuilder()
-				.setCustomId('availability')
-				.setLabel('Set up your availability')
-				.setStyle(ButtonStyle.Primary);
-
-			const rules = new ButtonBuilder()
-				.setCustomId('rulesinfo')
-				.setLabel('Rules and info')
-				.setStyle(ButtonStyle.Primary);
-
-			const contactstaff = new ButtonBuilder()
-				.setCustomId('contactstaff')
-				.setLabel('Contact staff')
-				.setStyle(ButtonStyle.Danger);
-
-			const row = new ActionRowBuilder()
-				.addComponents(availability, rules, contactstaff);
-
-			const signupmessageid = await signupchannel.send({ content: `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: CLOSED`, components: [row] });
-			await signupchannel.setLocked(true);
-
-			sql = "UPDATE `"+ global.config.mysql_database +"`.`eventmanager__events` SET `signupmessage` = "+ signupmessageid.id +", `mainchannel` = "+ channel.id +", `signupchannel` = "+ signupchannel.id +",`helpchannel` = "+ helpchannel.id +",`textchannel` = "+ textchannel.id +",`staffchannel` = "+ staffchannel.id +",`participantrole` = "+ participantRole.id +",`staffrole` = "+ staffRole.id +",`waitlistrole` = "+ waitlistRole.id +" WHERE `id` = "+ eventid +"";
+			sql = "UPDATE `"+ global.config.mysql_database +"`.`eventmanager__events` SET `mainchannel` = "+ channel.id +", `signupchannel` = "+ signupchannel.id +",`helpchannel` = "+ helpchannel.id +",`textchannel` = "+ textchannel.id +",`staffchannel` = "+ staffchannel.id +",`participantrole` = "+ participantRole.id +",`staffrole` = "+ staffRole.id +",`waitlistrole` = "+ waitlistRole.id +" WHERE `id` = "+ eventid +"";
 			result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);

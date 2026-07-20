@@ -517,11 +517,11 @@ async function signupHandler(interaction, client) {
                                 const chatthread = await guild.channels.fetch(event.textchannel);
 
                                 if (helpthread.type === ChannelType.PublicThread || helpthread.type === ChannelType.PrivateThread || helpthread.type === ChannelType.AnnouncementThread) {
-                                    helpthread.members.add(member).catch(err => console.error(`Could not add ${member.id} to help thread ${event.helpchannel}: ${err.message}`));
+                                    helpthread.members.add(member);
                                 }
 
                                 if (chatthread.type === ChannelType.PublicThread || chatthread.type === ChannelType.PrivateThread || chatthread.type === ChannelType.AnnouncementThread) {
-                                    chatthread.members.add(member).catch(err => console.error(`Could not add ${member.id} to chat thread ${event.textchannel}: ${err.message}`));
+                                    chatthread.members.add(member);
                                 }
 
                                 const randomMessage = getRandomWelcomeMessage();
@@ -610,83 +610,6 @@ async function signupHandler(interaction, client) {
 
 
 
-
-
-async function updateSignupStatus(client, eventid, status) {
-
-    try {
-
-        // Only allow the three known signup statuses
-        const validStatuses = ['OPEN', 'WAITLIST', 'CLOSED'];
-        if (!validStatuses.includes(status)) {
-            return "INVALID_STATUS";
-        }
-
-        // Resolve the event via the API. The website already persists the new
-        // signupstatus, so no database access is needed here.
-        const res = await httpsGetRequest({
-            hostname: 'friendsofrisk.com',
-            path: '/openapi/getEvents',
-            method: 'GET',
-        });
-        const events = JSON.parse(res);
-        const event = events.find(e => String(e.id) === String(eventid));
-
-        if (!event) {
-            return "EVENT_NOT_FOUND";
-        }
-
-        const guild = await client.guilds.resolve(event.serverid);
-        const channel = await guild.channels.fetch(event.signupchannel);
-        const message = await channel.messages.fetch(event.signupmessage);
-
-        // Rebuild the self service buttons (same as create-event)
-        const availability = new ButtonBuilder()
-            .setCustomId('availability')
-            .setLabel('Set up your availability')
-            .setStyle(ButtonStyle.Primary);
-
-        const rules = new ButtonBuilder()
-            .setCustomId('rulesinfo')
-            .setLabel('Rules and info')
-            .setStyle(ButtonStyle.Primary);
-
-        const contactstaff = new ButtonBuilder()
-            .setCustomId('contactstaff')
-            .setLabel('Contact staff')
-            .setStyle(ButtonStyle.Danger);
-
-        const row = new ActionRowBuilder();
-
-        // Add the signup button depending on the new status (no button when CLOSED)
-        if (status == 'OPEN') {
-            const signup = new ButtonBuilder()
-                .setCustomId('signup')
-                .setLabel('Sign up')
-                .setStyle(ButtonStyle.Success);
-            row.addComponents(signup);
-        } else if (status == 'WAITLIST') {
-            const signup = new ButtonBuilder()
-                .setCustomId('signup')
-                .setLabel('Join waitlist')
-                .setStyle(ButtonStyle.Success);
-            row.addComponents(signup);
-        }
-
-        row.addComponents(availability, rules, contactstaff);
-
-        const content = `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: ${status}`;
-
-        await message.edit({ content: content, components: [row] });
-
-        return "SUCCESS";
-
-    } catch (error) {
-        // Handle errors
-        console.error("Error:", error);
-        return "ERROR";
-    }
-}
 
 
 async function eventmanagerCheckinStart(client) {
@@ -1727,7 +1650,6 @@ module.exports = {
     eventmanagerCheckinStart,
     eventmanagerCheckinStop,
     signupHandler,
-    updateSignupStatus,
     addThreadMember,
     availabilityMessage,
     getAllowedChannelIds: () => allowedChannelIds,
