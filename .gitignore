@@ -21,3 +21,4 @@ riskbot.log
 .dotnet/*
 node_modules/*
 *.log
+.claude/*
