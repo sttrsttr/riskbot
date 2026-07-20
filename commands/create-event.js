@@ -266,7 +266,6 @@ async execute(interaction, client) {
 				.addComponents(availability, rules, contactstaff);
 
 			const signupmessageid = await signupchannel.send({ content: `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: CLOSED`, components: [row] });
-			await signupchannel.setLocked(true);
 
 			sql = "UPDATE `"+ global.config.mysql_database +"`.`eventmanager__events` SET `signupmessage` = "+ signupmessageid.id +", `mainchannel` = "+ channel.id +", `signupchannel` = "+ signupchannel.id +",`helpchannel` = "+ helpchannel.id +",`textchannel` = "+ textchannel.id +",`staffchannel` = "+ staffchannel.id +",`participantrole` = "+ participantRole.id +",`staffrole` = "+ staffRole.id +",`waitlistrole` = "+ waitlistRole.id +" WHERE `id` = "+ eventid +"";
 			result = await new Promise((resolve, reject) => {

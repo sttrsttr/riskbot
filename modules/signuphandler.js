@@ -1708,6 +1708,78 @@ async function availabilityMessage(message) {
 }
 
 
+// The #commands / signup thread is locked, so it auto-archives from inactivity
+// (and archived threads are hidden and cannot be unarchived by regular members).
+// Keep it surfaced by unarchiving the signup thread of every active event.
+async function eventmanagerunarchivecommandthreads(client) {
+
+    try {
+
+        const res = await httpsGetRequest({
+            hostname: 'friendsofrisk.com',
+            path: '/openapi/getEvents',
+            method: 'GET',
+        });
+        const events = JSON.parse(res);
+
+        for (const event of events) {
+            try {
+                if (event.validto || !event.signupchannel) continue;
+
+                const guild = await client.guilds.resolve(event.serverid);
+                if (!guild) continue;
+
+                const thread = await guild.channels.fetch(event.signupchannel).catch(() => null);
+                if (thread && thread.isThread() && thread.archived) {
+                    await thread.setArchived(false);
+                }
+            } catch (e) {
+                console.error(`Could not unarchive commands thread for event ${event.id}: ${e.message}`);
+            }
+        }
+
+    } catch (error) {
+        // Handle errors
+        console.error("Error:", error);
+    }
+}
+
+
+// The #commands / signup thread is a buttons-only self service panel. If a user
+// posts a message there, delete it and point them to the #chat thread instead.
+async function redirectCommandsMessage(message, client) {
+
+    try {
+
+        // Resolve the event (and its #chat / textchannel) from the signup channel
+        const res = await httpsGetRequest({
+            hostname: 'friendsofrisk.com',
+            path: '/openapi/getEvents',
+            method: 'GET',
+        });
+        const events = JSON.parse(res);
+        const event = events.find(e => String(e.signupchannel) === String(message.channel.id));
+        if (!event) return;
+
+        // Remove the stray message
+        await message.delete().catch(err => console.error(`Could not delete message in commands thread ${message.channel.id}: ${err.message}`));
+
+        // Point the user to the #chat thread
+        const guild = await client.guilds.resolve(event.serverid);
+        const chatthread = await guild.channels.fetch(event.textchannel).catch(() => null);
+        if (chatthread) {
+            await chatthread.send({
+                content: `<@${message.author.id}> Please use this channel instead if you want to chat about this event, or use the /staff command if you need help`,
+                allowedMentions: { users: [message.author.id], repliedUser: false }
+            });
+        }
+
+    } catch (error) {
+        // Handle errors
+        console.error("Error:", error);
+    }
+}
+
 
 updateEventChannelIds();
 
@@ -1728,6 +1800,8 @@ module.exports = {
     eventmanagerCheckinStop,
     signupHandler,
     updateSignupStatus,
+    eventmanagerunarchivecommandthreads,
+    redirectCommandsMessage,
     addThreadMember,
     availabilityMessage,
     getAllowedChannelIds: () => allowedChannelIds,

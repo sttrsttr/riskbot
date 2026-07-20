@@ -37,6 +37,8 @@ const {
 	pingparticipants,
 	updateEventChannelIds,
 	updateSignupStatus,
+	eventmanagerunarchivecommandthreads,
+	redirectCommandsMessage,
 	getAllowedChannelIds,
 	getChatChannelIds,
 	getAnnouncementChannelsIds
@@ -116,6 +118,7 @@ client.once(Events.ClientReady, () => {
 	eventmanagerCheckinStop(client);
 	eventmanager48hourping(client);
 	eventmanagerwelcomethreads(client);
+	eventmanagerunarchivecommandthreads(client);
 
 	//checkNewButNotSignedUp(client, global.config.guilds.MAIN);
 
@@ -136,6 +139,11 @@ cron.schedule("0 */5 * * * *", function () {
 	eventmanagegroupstartingnow(client);
 	eventmanagerlockthreads(client);
 	eventmanagerwelcomethreads(client);
+});
+
+// Keep each active event's #commands / signup thread unarchived (surfaced) every 6 hours
+cron.schedule("0 0 */6 * * *", function () {
+	eventmanagerunarchivecommandthreads(client);
 });
 
 // Update calendar message every 12th hour
@@ -244,7 +252,10 @@ client.on('messageCreate', async (message) => {
 	if (!message.author.bot && !message.system) {
 		const contentorig = message.content.trim();
 		const content = contentorig.toLowerCase();
-		if (announcementChannelsIds.includes(message.channel.id) && !content.includes('(noping)')) {
+		if (allowedChannelIds.includes(message.channel.id)) {
+			// #commands / signup thread is a buttons-only panel; redirect chatter to #chat
+			redirectCommandsMessage(message, client);
+		} else if (announcementChannelsIds.includes(message.channel.id) && !content.includes('(noping)')) {
 			pingparticipants(message, client);
 		} else if (chatChannelIds.includes(message.channel.id) || chatChannelIds.includes(message.channel.parentId)) {
 			if (content.includes('change my availability') || content.includes('update my availability') || content.includes('from my availability') || content.includes('in my availability') || content.includes('update availability') || content.includes('change availability') || content.includes('availability update') || content.includes('to my availability')) {
