@@ -1,5 +1,5 @@
 // Load required modules and config
-const { SlashCommandBuilder, ChannelType, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { updateEventChannelIds } = require('../modules/signuphandler.js');
 
 var mysql = require('mysql2');

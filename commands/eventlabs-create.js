@@ -1,5 +1,5 @@
 // Load required modules and config
-const { SlashCommandBuilder, ChannelType, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { guilds, mysql_host, mysql_username, mysql_password, mysql_database } = require('../riskbot_config.json');
 const { updateEventChannelIds } = require('../modules/signuphandler.js');
 
