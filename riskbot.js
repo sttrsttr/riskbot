@@ -32,6 +32,7 @@ const {
 	eventmanager1hourping,
 	eventmanagerCheckinStart,
 	eventmanagerCheckinStop,
+	eventmanagerUnscheduledPing,
 	availabilityMessage,
 	pingstaff,
 	pingparticipants,
@@ -74,15 +75,12 @@ let announcementChannelsIds = getAnnouncementChannelsIds();
 
 // Spawn Discord client
 const client = new Client({
-	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessageReactions],
+	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMessageReactions],
 	partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
 // Make client global for all modules/functions
 global.client = client;
-
-// Special role ID for main server participants who have never signed up for any events. Working together with the checkNewButNotSignedUp function.
-global.main_no_role = '1414643032002920468';
 
 // Load commands
 client.commands = new Collection();
@@ -119,6 +117,7 @@ client.once(Events.ClientReady, () => {
 	eventmanager48hourping(client);
 	eventmanagerwelcomethreads(client);
 	eventmanagerunarchivecommandthreads(client);
+	eventmanagerUnscheduledPing(client);
 
 	//checkNewButNotSignedUp(client, global.config.guilds.MAIN);
 
@@ -149,6 +148,7 @@ cron.schedule("0 0 */6 * * *", function () {
 // Update calendar message every 12th hour
 cron.schedule("0 0 */12 * * *", function () {
 	refreshtournamentcalendar();
+	eventmanagerUnscheduledPing(client);
 });
 
 // Scan for new members that hasnt signed up for any tournaments every day at 14:00
@@ -182,19 +182,6 @@ process.on('uncaughtException', (error) => {
 	console.error('Stack trace:', error.stack);
 });
 
-
-// When members join the main server, add specific role
-client.on('guildMemberAdd', async (member) => {
-
-	if (global.config.guilds.MAIN === undefined) return;
-
-	if (member.guild.id !== global.config.guilds.MAIN) return; // Only for your target guild
-
-	// Add the role to the new member
-	if (!member.roles.cache.has(global.config.mainserver_noevents_role)) {
-		await member.roles.add(global.config.mainserver_noevents_role).catch(console.error);
-	}
-});
 
 // Listen for any commands
 client.on(Events.InteractionCreate, async interaction => {
@@ -332,38 +319,6 @@ client.on('messageCreate', async (message) => {
 	}
 });
 
-
-// threadMembersUpdate
-/* Emitted whenever members are added or removed from a thread. 
-Permissions Required: GUILD_MEMBERS privileged intent
-PARAMETER    TYPE                                   DESCRIPTION
-newMembers   Collection <Snowflake, ThreadMember>   The members after the update    
-oldMembers   Collection <Snowflake, ThreadMember>   The members before the update
-*/
-client.on('threadMembersUpdate', async (newMembers, oldMembers, thread) => {
-
-	const channelid = thread.parentId;
-	const serverid = thread.guildId;
-
-	// Loop through each oldMembers
-	oldMembers.forEach((member) => {
-		if (!newMembers.has(member.id)) {
-			// User has left the thread
-			//console.log(`User ${member.id} left thread ${thread.id}`);
-			removeLoungeMember(serverid, thread.id, member.id);
-		}
-	});
-
-	// Loop through each newMembers
-	newMembers.forEach((member) => {
-		if (!oldMembers.has(member.id)) {
-			// User has joined the thread
-			//console.log(`User ${member.id} joined thread ${thread.id}`);
-			// Handle addition logic here
-		}
-	});
-
-});
 
 
 // Function to log any command run
@@ -590,14 +545,6 @@ app.post('/api/addrole', async (req, res) => {
 			const role = await guild.roles.fetch(post.roleid);
 			if (role) {
 				await member.roles.add(role);
-
-				if (guild.id === global.config.guilds.MAIN) {
-					// Remove the role from the new member
-					if (member.roles.cache.has(global.main_no_role)) {
-						await member.roles.remove(global.main_no_role).catch(console.error);
-					}
-				}
-
 			}
 		}
 		res.header("Content-Type", 'application/json');

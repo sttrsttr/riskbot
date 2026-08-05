@@ -100,7 +100,15 @@ module.exports = {
                             await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
                             let message = "Swap executed between <@" + swap.from_player + "> and <@" + swap.to_player + ">";
-                            swap_users(client, event.serverid, event.mainchannel, swap.from_group_threadid, swap.from_player, swap.to_group_threadid, swap.to_player, message, event.staffrole);
+                            const swapresult = await swap_users(client, event.serverid, event.mainchannel, swap.from_group_threadid, swap.from_player, swap.to_group_threadid, swap.to_player, message, event.staffrole);
+
+                            if (swapresult == "SUCCESS") {
+                                await interaction.followUp({ content: "Swap completed", flags: 64 });
+                            } else if (swapresult == "MEMBER_NOT_FOUND") {
+                                await interaction.followUp({ content: "The groups were swapped in the database, but at least one of the players has left the server so they could not be added to their new group thread. See the notice posted in the threads.", flags: 64 });
+                            } else {
+                                await interaction.followUp({ content: "The groups were swapped in the database, but I could not finish the Discord side of the swap (" + swapresult + "). Please check the group threads manually.", flags: 64 });
+                            }
 
 
                         }

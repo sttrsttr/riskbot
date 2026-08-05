@@ -3,10 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const { AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const { AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, RESTJSONErrorCodes } = require('discord.js');
 const { httpsPostRequest, httpsGetRequest } = require('./helperfunctions.js');
 const inspirationalQuotes = JSON.parse(fs.readFileSync(path.join(__dirname, 'inspirationalQuotes.json'), 'utf8'));
 const welcomeMessages = JSON.parse(fs.readFileSync(path.join(__dirname, 'welcomeMessages.json'), 'utf8'));
+
+const UNSCHEDULED_GAMETIME = '4000-01-01 00:00:00';
+const UNSCHEDULED_GAMETIME_PREFIX = '4000-01-01';
 
 // Function to get a random welcome message
 function getRandomWelcomeMessage() {
@@ -26,9 +29,46 @@ function uuidv4() {
     );
 }
 
+function isUnscheduledGametime(gametime) {
+    if (!gametime) return false;
+    return String(gametime).startsWith(UNSCHEDULED_GAMETIME_PREFIX);
+}
+
+function getDiscordTimestamp(gametime) {
+    return Math.floor(new Date(gametime).getTime() / 1000);
+}
+
 let allowedChannelIds = [];
 let chatChannelIds = [];
 let announcementChannelsIds = [];
+
+// Fetch a guild member, returning null when Discord says the member is not in the
+// guild (10007 Unknown Member, typically because they left) instead of throwing.
+// Any other API error is rethrown so it is not silently swallowed.
+async function fetchMemberOrNull(guild, userid) {
+    try {
+        return await guild.members.fetch(userid);
+    } catch (error) {
+        if (error.code === RESTJSONErrorCodes.UnknownMember || error.code === RESTJSONErrorCodes.UnknownUser) {
+            console.log(`Member ${userid} is not in guild ${guild.id} any more`);
+            return null;
+        }
+        throw error;
+    }
+}
+
+// Fetch a thread, returning null if it is gone instead of throwing.
+async function fetchThreadOrNull(channel, threadid) {
+    try {
+        return await channel.threads.fetch(threadid);
+    } catch (error) {
+        if (error.code === RESTJSONErrorCodes.UnknownChannel) {
+            console.log(`Thread ${threadid} no longer exists in channel ${channel.id}`);
+            return null;
+        }
+        throw error;
+    }
+}
 
 // API function for swapping users after everything else is handled backend wise
 async function swap_users(client, tserver, tchannel, tthread_a, tuser_a, tthread_b, tuser_b, tmessage, staffroleid) {
@@ -38,38 +78,92 @@ async function swap_users(client, tserver, tchannel, tthread_a, tuser_a, tthread
         const guild = await client.guilds.fetch(tserver);
         if (!guild) {
             console.log('Guild not found');
-            return;
+            return "GUILD_NOT_FOUND";
         }
 
         const channel = await guild.channels.fetch(tchannel);
         if (!channel) {
             console.log('Channel not found');
-            return;
+            return "CHANNEL_NOT_FOUND";
         }
 
-        const user1 = await guild.members.fetch(tuser_a);
-        const user2 = await guild.members.fetch(tuser_b);
+        // A player may have left the server between the database swap and this call.
+        // Do not abort the whole swap for that - the threads must still be brought in
+        // line with the database, and staff need to be told what could not be done.
+        const user1 = await fetchMemberOrNull(guild, tuser_a);
+        const user2 = await fetchMemberOrNull(guild, tuser_b);
 
-        const thread1 = await channel.threads.fetch(tthread_a);
-        const thread2 = await channel.threads.fetch(tthread_b);
+        const thread1 = await fetchThreadOrNull(channel, tthread_a);
+        const thread2 = await fetchThreadOrNull(channel, tthread_b);
 
-        await thread1.members.add(user2.id);
-        await thread2.members.add(user1.id);
-
-        const message1 = await thread1.send(tmessage, { allowedMentions: { users: [user1.id, user2.id], repliedUser: false } });
-        const message2 = await thread2.send(tmessage, { allowedMentions: { users: [user1.id, user2.id], repliedUser: false } });
-
-        if (!user1.roles.cache.has(staffroleid)) {
-            await thread1.members.remove(user1.id);
+        if (!thread1 && !thread2) {
+            console.log(`Neither thread ${tthread_a} nor ${tthread_b} could be fetched`);
+            return "THREAD_NOT_FOUND";
         }
-        if (!user2.roles.cache.has(staffroleid)) {
-            await thread2.members.remove(user2.id);
+
+        let notes = '';
+        if (!user1) {
+            notes += `\n\n⚠️ <@${tuser_a}> is no longer a member of this server, so they could not be added to their new group thread.`;
+        }
+        if (!user2) {
+            notes += `\n\n⚠️ <@${tuser_b}> is no longer a member of this server, so they could not be added to their new group thread.`;
+        }
+        if (!thread1) {
+            notes += `\n\n⚠️ The thread for the group <@${tuser_a}> came from could not be found.`;
+        }
+        if (!thread2) {
+            notes += `\n\n⚠️ The thread for the group <@${tuser_b}> came from could not be found.`;
+        }
+
+        const allowedMentions = { users: [tuser_a, tuser_b], repliedUser: false };
+
+        // Add each player to the other group's thread. Each side is independent so one
+        // failure does not leave the other half of the swap undone.
+        if (thread1 && user2) {
+            await thread1.members.add(user2.id).catch(err => {
+                console.error(`Could not add ${user2.id} to thread ${tthread_a}: ${err.message}`);
+                notes += `\n\n⚠️ Could not add <@${user2.id}> to this thread, please add them manually.`;
+            });
+        }
+        if (thread2 && user1) {
+            await thread2.members.add(user1.id).catch(err => {
+                console.error(`Could not add ${user1.id} to thread ${tthread_b}: ${err.message}`);
+                notes += `\n\n⚠️ Could not add <@${user1.id}> to this thread, please add them manually.`;
+            });
+        }
+
+        if (thread1) {
+            await thread1.send({ content: tmessage + notes, allowedMentions: allowedMentions })
+                .catch(err => console.error(`Could not post swap message in thread ${tthread_a}: ${err.message}`));
+        }
+        if (thread2) {
+            await thread2.send({ content: tmessage + notes, allowedMentions: allowedMentions })
+                .catch(err => console.error(`Could not post swap message in thread ${tthread_b}: ${err.message}`));
+        }
+
+        // Remove the players from their old threads. Members who left the guild are
+        // removed from threads by Discord already, so only do this for members we found.
+        if (thread1 && user1 && !user1.roles.cache.has(staffroleid)) {
+            await thread1.members.remove(user1.id)
+                .catch(err => console.error(`Could not remove ${user1.id} from thread ${tthread_a}: ${err.message}`));
+        }
+        if (thread2 && user2 && !user2.roles.cache.has(staffroleid)) {
+            await thread2.members.remove(user2.id)
+                .catch(err => console.error(`Could not remove ${user2.id} from thread ${tthread_b}: ${err.message}`));
+        }
+
+        if (!user1 || !user2) {
+            return "MEMBER_NOT_FOUND";
+        }
+        if (!thread1 || !thread2) {
+            return "THREAD_NOT_FOUND";
         }
 
         return "SUCCESS";
 
     } catch (error) {
         console.error('Error fetching guild or channel:', error);
+        return "ERROR";
     }
 
 }
@@ -265,11 +359,15 @@ async function pingwaitlist(client, thread) {
                 mentionroles = [noshowrole.id];
             }
 
-            const date = new Date(group.gametime);
-
             if (mentionroles) {
 
-                const message = `Attention ${mention} there is probably an open spot in ${group.name} starting in <t:${date.getTime() / 1000}:R>\n\nFirst come first serve, click this button to join this group!`;
+                let message;
+                if (isUnscheduledGametime(group.gametime)) {
+                    message = `Attention ${mention} there is probably an open spot in ${group.name}.\n\nThis group is currently unscheduled, so please coordinate a game time with the players and event staff after joining.\n\nFirst come first serve, click this button to join this group!`;
+                } else {
+                    const timestamp = getDiscordTimestamp(group.gametime);
+                    message = `Attention ${mention} there is probably an open spot in ${group.name} starting in <t:${timestamp}:R>\n\nFirst come first serve, click this button to join this group!`;
+                }
 
                 const btn1 = new ButtonBuilder()
                     .setCustomId('joingroupfromwaitlist')
@@ -545,14 +643,6 @@ async function signupHandler(interaction, client) {
                                         const participantrole = await guild.roles.fetch(event.participantrole);
                                         if (participantrole) {
                                             await member.roles.add(participantrole);
-
-                                            if (guild.id == global.config.guilds.MAIN) {
-                                                // Remove specific role from MAIN if they have it
-                                                if (member.roles.cache.has(global.main_no_role)) {
-                                                    await member.roles.remove(global.main_no_role);
-                                                }
-                                            }
-
                                         }
                                     }
                                 }
@@ -1057,10 +1147,18 @@ async function eventmanagerwelcomethreads(client) {
             let attachments = [];
             let components = [];
 
+            const unscheduled = isUnscheduledGametime(group.gametime);
+
             // Prepare the message by replacing placeholders
             let threadmessage = group.threadmessage;
-            threadmessage = threadmessage.replace(/\B(##GAMETIME##)\B/i, `<t:${Math.floor(new Date(group.gametime).getTime() / 1000)}:F>`);
-            threadmessage = threadmessage.replace(/\B(##COUNTDOWN##)\B/i, `<t:${Math.floor(new Date(group.gametime).getTime() / 1000)}:R>`);
+            if (unscheduled) {
+                threadmessage = threadmessage.replace(/\B(##GAMETIME##)\B/i, `Unscheduled (PLEASE SCHEDULE ASAP AND CONTACT STAFF)`);
+                threadmessage = threadmessage.replace(/\B(##COUNTDOWN##)\B/i, `No game time set yet`);
+            } else {
+                const timestamp = getDiscordTimestamp(group.gametime);
+                threadmessage = threadmessage.replace(/\B(##GAMETIME##)\B/i, `<t:${timestamp}:F>`);
+                threadmessage = threadmessage.replace(/\B(##COUNTDOWN##)\B/i, `<t:${timestamp}:R>`);
+            }
 
             // Prepare settings URLs
             const rounds = [1, 2, 3, 4, 5, 6];
@@ -1147,6 +1245,96 @@ async function eventmanagerwelcomethreads(client) {
     }
 
 
+}
+
+
+async function eventmanagerUnscheduledPing(client) {
+
+    try {
+
+        // Connect to SQL database and fetch unscheduled active groups
+        const con = mysql.createConnection({
+            host: global.config.mysql_host,
+            user: global.config.mysql_username,
+            password: global.config.mysql_password,
+            supportBigNumbers: true,
+            bigNumberStrings: true
+        });
+
+        await new Promise((resolve, reject) => {
+            con.connect(err => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+
+        let sql = "SELECT e.`serverid`, e.`helpchannel`, e.`id` AS `eventid`, eg.`name`, eg.`id`, eg.`threadid` FROM `" + global.config.mysql_database + "`.`eventmanager__groups` eg INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__events` e ON r.`eventid` = e.`id` AND e.`validto` IS NULL AND eg.`threadid` IS NOT NULL AND eg.`completed` IS NULL AND eg.`gametime` LIKE '" + UNSCHEDULED_GAMETIME_PREFIX + "%'";
+        const groups = await new Promise((resolve, reject) => {
+            con.query(sql, (err, result) => {
+                if (err) return reject(err);
+                resolve(result);
+            });
+        });
+
+        for (const group of groups) {
+            const guild = await client.guilds.resolve(group.serverid);
+            if (!guild) continue;
+
+            const thread = await guild.channels.fetch(group.threadid).catch(() => null);
+            if (!thread) continue;
+
+            sql = "SELECT `playerid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + group.id + " AND `validto` IS NULL ORDER BY `playerid` ASC";
+            const players = await new Promise((resolve, reject) => {
+                con.query(sql, (err, result) => {
+                    if (err) return reject(err);
+                    resolve(result);
+                });
+            });
+
+            const playerIds = players.map(player => player.playerid);
+            if (playerIds.length === 0) continue;
+
+            let userPings = '';
+            for (const playerId of playerIds) {
+                userPings += `<@${playerId}> `;
+            }
+
+            const message = `UNSCHEDULED GAME REMINDER\n\nThis group does not have a confirmed game time yet. Please coordinate a time between yourselves and report the decided time to event staff in the help thread (<#${group.helpchannel}>), or use the Ping event staff button below if you need help.\n\n${userPings}`;
+
+            const btn1 = new ButtonBuilder()
+                .setCustomId('pinghelp')
+                .setLabel('Ping event staff')
+                .setStyle(ButtonStyle.Danger);
+
+            const btn2 = new ButtonBuilder()
+                .setCustomId('cantmakeit')
+                .setLabel('I cannot make it')
+                .setStyle(ButtonStyle.Danger);
+
+            const btn3 = new ButtonBuilder()
+                .setCustomId('rulesinfo')
+                .setLabel('Rules&info')
+                .setStyle(ButtonStyle.Primary);
+
+            const row = new ActionRowBuilder().addComponents(btn1).addComponents(btn2).addComponents(btn3);
+
+            await thread.send({
+                content: message,
+                components: [row],
+                allowedMentions: { users: playerIds, repliedUser: false }
+            });
+        }
+
+        await new Promise((resolve, reject) => {
+            con.end(err => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
 
@@ -1571,7 +1759,6 @@ async function eventmanagerCheckinStop(client) {
                 });
             });
 
-            const threadMembers = await thread.members.fetch();
 
             for (const player of players_to_be_removed) {
 
@@ -1582,9 +1769,7 @@ async function eventmanagerCheckinStop(client) {
                     const member = await guild.members.fetch(player.playerid);
                     if (member) {
                         await member.roles.add(noshowrole);
-                        if (threadMembers.has(member.id)) {
-                            await thread.members.remove(`${member.id}`);
-                        }
+                        await thread.members.remove(`${member.id}`);
                     }
                     sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + member.id + "," + group.eventid + ",NOW(),'Failed to check in','Using Discord',NULL,NULL)";
                     await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
@@ -1798,6 +1983,7 @@ module.exports = {
     pingparticipants,
     eventmanagerCheckinStart,
     eventmanagerCheckinStop,
+    eventmanagerUnscheduledPing,
     signupHandler,
     updateSignupStatus,
     eventmanagerunarchivecommandthreads,

@@ -22,7 +22,6 @@ Create an riskbot_config.json file with the following content:
     "RETRYGAMES": "681626969670156320",
   },
   "for_api_key": "",
-  "mainserver_noevents_role": ""
 }
 ```
 
