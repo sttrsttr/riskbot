@@ -43,8 +43,7 @@ module.exports = async (interaction) => {
 
 				await member.roles.add(group.noshowrole);
 
-				const threadMembers = await thread.members.fetch();
-				if (threadMembers.has(member.id) && !member.roles.cache.has(group.staffroleid)) {
+				if (!member.roles.cache.has(group.staffroleid)) {
 					await thread.members.remove(`${member.id}`);
 				}
 

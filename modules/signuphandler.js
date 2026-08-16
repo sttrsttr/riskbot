@@ -11,6 +11,13 @@ const welcomeMessages = JSON.parse(fs.readFileSync(path.join(__dirname, 'welcome
 const UNSCHEDULED_GAMETIME = '4000-01-01 00:00:00';
 const UNSCHEDULED_GAMETIME_PREFIX = '4000-01-01';
 
+// Players start out with this karma score and infractions bring it down.
+const KARMA_STARTING_SCORE = 100;
+// Below this karma score a player may only sign up for events that already
+// have KARMA_MIN_PARTICIPANTS participants signed up.
+const KARMA_SIGNUP_MINIMUM = 50;
+const KARMA_MIN_PARTICIPANTS = 100;
+
 // Function to get a random welcome message
 function getRandomWelcomeMessage() {
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
@@ -396,6 +403,46 @@ async function pingwaitlist(client, thread) {
 }
 
 
+// Karma is stored as infraction points that are always negative and never sum
+// above zero, so a players score is the starting score plus that sum.
+async function getKarmaScore(con, userid) {
+
+    const sql = "SELECT SUM(`points`) AS `sum` FROM `" + global.config.mysql_database + "`.`karmapoints` WHERE `playerid` = " + userid + "";
+    const result = await new Promise((resolve, reject) => {
+        con.query(sql, function (err, result) {
+            if (err) reject(err);
+            resolve(result);
+        });
+    });
+
+    let sum = 0;
+    if (result[0] && result[0].sum) {
+        sum = parseInt(result[0].sum);
+    }
+
+    return KARMA_STARTING_SCORE + sum;
+}
+
+
+// Number of players currently signed up for an event, waitlisted players included.
+async function countEventSignups(con, eventid) {
+
+    const sql = "SELECT COUNT(*) AS `signups` FROM `" + global.config.mysql_database + "`.`eventmanager__signups` WHERE `eventid` = " + eventid + " AND `validto` IS NULL";
+    const result = await new Promise((resolve, reject) => {
+        con.query(sql, function (err, result) {
+            if (err) reject(err);
+            resolve(result);
+        });
+    });
+
+    if (result[0] && result[0].signups) {
+        return parseInt(result[0].signups);
+    }
+
+    return 0;
+}
+
+
 async function signupHandler(interaction, client) {
 
     // Allow this handler to run as a button interaction without an explicit client argument
@@ -511,8 +558,21 @@ async function signupHandler(interaction, client) {
                             resolve(result);
                         });
                     });
+                    // Low karma players are only let into events that already have a
+                    // decent number of participants signed up
+                    const karmascore = await getKarmaScore(con, userid);
+                    const signupcount = await countEventSignups(con, event.id);
+                    const lowkarma = karmascore < KARMA_SIGNUP_MINIMUM && signupcount < KARMA_MIN_PARTICIPANTS;
+
                     if (blacklisted.length > 0) {
                         await interaction.followUp({ content: `You are not able to sign up for ${event.name}. Please contact event staff if you have any questions.`, flags: 64 });
+                    } else if (lowkarma) {
+
+                        await interaction.followUp({ content: `You are **not** signed up for ${event.name}.\n\nYour karma score is **${karmascore}**, and with a karma score below ${KARMA_SIGNUP_MINIMUM} you can only sign up for events that already have at least ${KARMA_MIN_PARTICIPANTS} participants signed up. This event currently has ${signupcount}.\n\nYou can check your karma at https://friendsofrisk.com/karma/ or contact event staff if you have any questions.`, flags: 64 });
+
+                        sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + userid + "," + event.id + ",NOW(),'Signup blocked','Karma " + karmascore + " with " + signupcount + " signups',NULL,NULL)";
+                        await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
+
                     } else {
 
 

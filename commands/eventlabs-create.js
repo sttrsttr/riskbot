@@ -75,7 +75,7 @@ async execute(interaction, client) {
 					});
 					const eventid = result.insertId;
 	
-					let sql_round = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__rounds` VALUES (NULL,"+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,1,NULL,NULL,NULL,NULL,NULL,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
+					let sql_round = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__rounds` VALUES (NULL,"+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,-1,NULL,NULL,NULL,NULL,NULL,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
 					let result_round = await new Promise((resolve, reject) => {
 						con.query(sql_round, function (err, result) {
 							if (err) reject(err);

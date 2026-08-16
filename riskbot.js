@@ -396,15 +396,8 @@ app.post('/api/countmemes', async (req, res) => {
 
 // API Endpoint for deleting a role
 app.post('/api/emptyrole', async (req, res) => {
-	try {
-		let post = req.body;
-		let output = await emptyRole(client, post.serverid, post.roleid);;
-		res.header("Content-Type", 'application/json');
-		res.send(JSON.stringify(output, null, 4));
-	} catch (error) {
-		console.error('Error in emptying role:', error);
-		res.status(500).send({ error: "An error occurred during emptying role" });
-	}
+	console.error('Error, function not allowed due to member intent missing');
+	res.status(500).send({ error: "Not allowed to empty role due to missing member intent" });
 });
 
 // API Endpoint for deleting a role

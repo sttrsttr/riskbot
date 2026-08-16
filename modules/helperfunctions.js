@@ -157,13 +157,9 @@ async function fetchRole(client, serverid, roleid) {
 			return null;
 		}
 
-		const members = await guild.members.fetch();
-		const memberIds = members
-			.filter(member => member.roles.cache.has(role.id));
-
 		return {
 			roleName: role.name,
-			memberIds: memberIds
+			memberIds: []
 		};
 
 	} catch (error) {
@@ -277,10 +273,7 @@ async function removefromthread(client, server, channelid, threadid, userid) {
 			console.log('Thread not found');
 			return;
 		}
-		const threadMembers = await thread.members.fetch();
-		if (threadMembers.has(user.id)) {
-			await thread.members.remove(`${user.id}`);
-		}
+		await thread.members.remove(`${user.id}`);
 		return "SUCCESS";
 
 	} catch (error) {

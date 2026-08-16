@@ -89,8 +89,7 @@ module.exports = {
                                                 const welcomemsg = `<@${player.id}> just left this group`;
                                                 await currentthread.send({ content: welcomemsg, allowedMentions: { users: [player.id], repliedUser: false } });
 
-                                                const threadMembers = await currentthread.members.fetch();
-                                                if (threadMembers.has(member.id) && !member.roles.cache.has(group.staffroleid)) {
+                                                if (!member.roles.cache.has(group.staffroleid)) {
                                                     await currentthread.members.remove(`${member.id}`);
                                                 }
                                             }
