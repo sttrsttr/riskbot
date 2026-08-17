@@ -57,7 +57,7 @@ async execute(interaction, client) {
 
 		try {
 
-			let sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events` VALUES (NULL,'NORMAL','"+ eventname +"',"+ interaction.user.id +",NOW(),NULL,NULL,NULL,"+ guild.id +",1,'CLOSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,1,0,0,0,1,0,0,0,1)";
+			let sql = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__events` (`type`,`name`,`owner`,`validfrom`,`serverid`,`requireavailability`,`signupstatus`,`checkinsystem`,`autopingwl`,`hidescores`,`multirounds`,`waitlistbracket`,`joinbuttontogroup`,`qualificationround`,`waitlistqueue`,`badgerequired`,`elo`) VALUES ('NORMAL','"+ eventname +"',"+ interaction.user.id +",NOW(),"+ guild.id +",1,'CLOSED',1,1,0,0,0,1,0,0,0,1)";
 			let result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -66,7 +66,7 @@ async execute(interaction, client) {
 			});
 			const eventid = result.insertId;
 
-			let sql_round = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__rounds` VALUES (NULL,"+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,-1,NULL,NULL,NULL,NULL,NULL,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
+			let sql_round = "INSERT INTO `"+ global.config.mysql_database +"`.`eventmanager__rounds` (`eventid`,`bracket`,`round`,`roundname`,`status`,`groupmaxsize`,`groupminsize`,`scoring`,`losers`,`advancing`,`game1_settings`,`threadmessage`) VALUES ("+ eventid +",1,1,'Round 1','DRAFT',6,4,'POINTS','WAITLIST',0,-1,'This is your groups thread for this round, where you can confirm that everyone is ready, share lobby code before joinging the game and posting the results afterwards.\n## Your game is scheduled ##COUNTDOWN## at ##GAMETIME## (your local timezone)\nThe settings you are playing are shown in the attached images. If you have any question please click the buttons below or ask your fellow participants.\n## When the game is finished\nJust write the results in this thread and event staff will pick it up')";
 			let result_round = await new Promise((resolve, reject) => {
 				con.query(sql_round, function (err, result) {
 					if (err) reject(err);
