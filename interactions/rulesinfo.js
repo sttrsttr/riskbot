@@ -1,27 +1,11 @@
-const { httpsPostRequest } = require('../modules/helperfunctions.js');
+const { resolveEventForChannel } = require('../modules/helperfunctions.js');
 
 module.exports = async (interaction) => {
 
-	// rulesinfo buttons live in threads (signup / group / reminder threads) whose
-	// parent is the event main channel, which is what getEvent resolves on.
-	const mainchannelid = interaction.channel?.parentId || interaction.message.channelId;
-
 	try {
 
-		// getEvent
-		const options2 = {
-			hostname: 'friendsofrisk.com',
-			path: '/openapi/getEvent',
-			method: 'POST',
-		};
-
-		const postData2 = JSON.stringify({
-			mainchannelid: mainchannelid
-		});
-
-		const res2 = await httpsPostRequest(options2, postData2);
-		const events = JSON.parse(res2);
-		const event = events[0];
+		// Works for threads under the main channel and for dedicated event channels
+		const event = await resolveEventForChannel(interaction.channel);
 
 		if (event) {
 

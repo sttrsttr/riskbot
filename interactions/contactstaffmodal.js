@@ -1,4 +1,4 @@
-const { httpsPostRequest } = require('../modules/helperfunctions.js');
+const { httpsPostRequest, resolveEventForChannel } = require('../modules/helperfunctions.js');
 
 module.exports = async (interaction) => {
 
@@ -8,17 +8,8 @@ module.exports = async (interaction) => {
 
 		const message = interaction.fields.getTextInputValue('staffmessage');
 
-		// The button lives in the #commands thread; its parent is the event main
-		// channel, which is what getEvent resolves on.
-		const mainchannelid = interaction.channel?.parentId || interaction.channelId;
-
-		// getEvent
-		const res = await httpsPostRequest(
-			{ hostname: 'friendsofrisk.com', path: '/openapi/getEvent', method: 'POST' },
-			JSON.stringify({ mainchannelid: mainchannelid })
-		);
-		const events = JSON.parse(res);
-		const event = events[0];
+		// The button lives in the event's commands thread/channel; resolve the event from it
+		const event = await resolveEventForChannel(interaction.channel);
 
 		if (!event) {
 			await interaction.followUp({ content: "ERROR: I could not find any event active in this channel", flags: 64 });
@@ -28,7 +19,7 @@ module.exports = async (interaction) => {
 		// Log/rate-limit the ping the same way the /staff command does
 		const pingRes = await httpsPostRequest(
 			{ hostname: 'friendsofrisk.com', path: '/m2mapi/addPingLog', method: 'POST', headers: { 'X-API-KEY': global.config.for_api_key } },
-			JSON.stringify({ command: 'pingstaff', userid: interaction.user.id, channelid: mainchannelid })
+			JSON.stringify({ command: 'pingstaff', userid: interaction.user.id, channelid: event.mainchannel })
 		);
 		const pingData = JSON.parse(pingRes);
 

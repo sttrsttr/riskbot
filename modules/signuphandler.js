@@ -839,6 +839,84 @@ async function updateSignupStatus(client, eventid, status) {
 }
 
 
+// Posts a FRESH commands/self-service message (with the signup buttons) into the event's
+// signup thread and returns the new message id. Used by the website when a site admin
+// repoints the signup channel id at a new thread. Reads the saved channel id and the
+// current signup status via the openapi, same as updateSignupStatus - the caller stores
+// the returned id as the event's signupmessage.
+async function sendSignupMessage(client, eventid) {
+
+    try {
+
+        // Resolve the event via the API - the website has already saved the new channel id
+        const res = await httpsGetRequest({
+            hostname: 'friendsofrisk.com',
+            path: '/openapi/getEvents',
+            method: 'GET',
+        });
+        const events = JSON.parse(res);
+        const event = events.find(e => String(e.id) === String(eventid));
+
+        if (!event) {
+            return { error: "EVENT_NOT_FOUND" };
+        }
+        if (!event.signupchannel) {
+            return { error: "NO_SIGNUP_CHANNEL" };
+        }
+
+        const guild = await client.guilds.resolve(event.serverid);
+        const channel = await guild.channels.fetch(event.signupchannel);
+
+        // Same buttons as updateSignupStatus, driven by the event's current signup status
+        const validStatuses = ['OPEN', 'WAITLIST', 'CLOSED'];
+        const status = validStatuses.includes(event.signupstatus) ? event.signupstatus : 'CLOSED';
+
+        const availability = new ButtonBuilder()
+            .setCustomId('availability')
+            .setLabel('Set up your availability')
+            .setStyle(ButtonStyle.Primary);
+
+        const rules = new ButtonBuilder()
+            .setCustomId('rulesinfo')
+            .setLabel('Rules and info')
+            .setStyle(ButtonStyle.Primary);
+
+        const contactstaff = new ButtonBuilder()
+            .setCustomId('contactstaff')
+            .setLabel('Contact staff')
+            .setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder();
+
+        if (status == 'OPEN') {
+            const signup = new ButtonBuilder()
+                .setCustomId('signup')
+                .setLabel('Sign up')
+                .setStyle(ButtonStyle.Success);
+            row.addComponents(signup);
+        } else if (status == 'WAITLIST') {
+            const signup = new ButtonBuilder()
+                .setCustomId('signup')
+                .setLabel('Join waitlist')
+                .setStyle(ButtonStyle.Success);
+            row.addComponents(signup);
+        }
+
+        row.addComponents(availability, rules, contactstaff);
+
+        const content = `# Self service channel\n\nPlease use the buttons below to interact with this event.\n\n## Signup status: ${status}`;
+
+        const message = await channel.send({ content: content, components: [row] });
+
+        return { signupmessageid: message.id };
+
+    } catch (error) {
+        console.error("Error:", error);
+        return { error: "ERROR" };
+    }
+}
+
+
 async function eventmanagerCheckinStart(client) {
 
     try {
@@ -2046,6 +2124,7 @@ module.exports = {
     eventmanagerUnscheduledPing,
     signupHandler,
     updateSignupStatus,
+    sendSignupMessage,
     eventmanagerunarchivecommandthreads,
     redirectCommandsMessage,
     addThreadMember,

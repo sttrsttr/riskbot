@@ -16,7 +16,6 @@ module.exports = {
 	async execute(interaction) {
 	  try {
 
-//		await interaction.reply({ content: "Give me a second please...\n"+ dmtargets, flags: 64 });
 
 		// Connect to SQL database
 		var con = mysql.createConnection({

@@ -8,7 +8,7 @@ module.exports = {
 	async execute(interaction) {
 	  try {
 
-		await interaction.reply({ content: "This command is outdated. Just visit https://www.friendsofrisk.com and you can login directly from Discord there\n"+ dmtargets, flags: 64 });
+		await interaction.reply({ content: "This command is outdated. Just visit https://www.friendsofrisk.com and you can login directly from Discord there", flags: 64 });
 
 	  } catch (error) {
 		console.error(error);

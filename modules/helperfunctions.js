@@ -28,6 +28,47 @@ function httpsGetRequest(options) {
 }
 
 
+// Resolve the event a channel belongs to. Buttons normally live in threads whose
+// parent is the event main channel (which is what /openapi/getEvent resolves on),
+// but some events use dedicated channels instead (e.g. a commands channel inside a
+// category). In that case parentId is the category, so we fall back to matching the
+// channel id against each active event's own channels.
+async function resolveEventForChannel(channel) {
+	if (!channel) return null;
+	const channelId = String(channel.id);
+	const parentId = channel.parentId ? String(channel.parentId) : null;
+
+	// 1) Thread under the event main channel, or the main channel itself
+	try {
+		const res = await httpsPostRequest(
+			{ hostname: 'friendsofrisk.com', path: '/openapi/getEvent', method: 'POST' },
+			JSON.stringify({ mainchannelid: parentId || channelId })
+		);
+		const events = JSON.parse(res);
+		if (events && events[0]) {
+			// getEvent does not echo the main channel back; callers rely on it
+			if (!events[0].mainchannel) events[0].mainchannel = parentId || channelId;
+			return events[0];
+		}
+	} catch (err) {
+		console.error(`resolveEventForChannel: getEvent failed for ${channelId}: ${err.message}`);
+	}
+
+	// 2) Dedicated event channel (signup/commands, chat, help, staff)
+	try {
+		const res = await httpsGetRequest({ hostname: 'friendsofrisk.com', path: '/openapi/getEvents', method: 'GET' });
+		const events = JSON.parse(res).filter(e => !e.validto);
+		const ownChannels = e => [e.mainchannel, e.signupchannel, e.textchannel, e.helpchannel, e.staffchannel].filter(Boolean).map(String);
+		return events.find(e => ownChannels(e).includes(channelId))
+			|| (parentId && events.find(e => ownChannels(e).includes(parentId)))
+			|| null;
+	} catch (err) {
+		console.error(`resolveEventForChannel: getEvents failed for ${channelId}: ${err.message}`);
+		return null;
+	}
+}
+
+
 // API functions
 async function add_to_thread(client, serverid, channelid, threadid, userid) {
 	try {
@@ -312,12 +353,6 @@ async function create_thread(client, tserver, tchannel, threadname, tusers, tsta
 			name: threadname,
 			type: ChannelType.PrivateThread,
 			autoArchiveDuration: 10080,
-			permissionOverwrites: [
-				{
-					id: staffrole, // ID of the role
-					allow: ['ViewChannel', 'SendMessages', 'ManageMessages', 'ManageThreads'],
-				}
-			],
 		});
 
 		if (!thread) {
@@ -397,9 +432,19 @@ async function createRole(client, tserver, trolename) {
 
 
 // API functions
-async function message_thread(client, msgserver, msgchannel, msgthread, msg, tusers) {
+// options (all optional): ping (default true) - mention the users in tusers,
+// embed (default true) - wrap the message in an embed, plain text otherwise,
+// title (default 'Important message!') - title of the embed
+async function message_thread(client, msgserver, msgchannel, msgthread, msg, tusers, options) {
 
 	try {
+
+		options = options || {};
+		const isOff = value => value === false || value === 0 || value === "0" || value === "false" || value === "no";
+		const ping = !isOff(options.ping);
+		const useembed = !isOff(options.embed);
+		const title = options.title ? String(options.title).substring(0, 256) : `Important message!`;
+		tusers = tusers || [];
 
 		//tusers = [...new Set(tusers)];
 
@@ -459,18 +504,27 @@ async function message_thread(client, msgserver, msgchannel, msgthread, msg, tus
 		}
 
 
-		// Add each user in tusers to the thread using Promise.all
+		// Mentioning the users also adds them to the thread
 		let userPings = "";
-		for (const userid of tusers) {
-			userPings += `<@${userid}> `;
+		if (ping) {
+			for (const userid of tusers) {
+				userPings += `<@${userid}> `;
+			}
 		}
 
-		const embed = new EmbedBuilder()
-			.setTitle(`Important message!`)
-			.setDescription(messagetext)
-			.setTimestamp();
+		let embeds = [];
+		let content = userPings;
+		if (useembed) {
+			const embed = new EmbedBuilder()
+				.setTitle(title)
+				.setDescription(messagetext)
+				.setTimestamp();
+			embeds.push(embed);
+		} else {
+			content = userPings + messagetext;
+		}
 
-		const message = await channel.send({ content: userPings, embeds: embed ? [embed] : [], components: components, files: attachments, allowedMentions: { users: tusers, repliedUser: false } });
+		const message = await channel.send({ content: content, embeds: embeds, components: components, files: attachments, allowedMentions: { users: ping ? tusers : [], repliedUser: false } });
 
 		return message;
 
@@ -519,5 +573,6 @@ module.exports = {
 	message_thread,
 	message_channel,
 	httpsPostRequest,
-	httpsGetRequest
+	httpsGetRequest,
+	resolveEventForChannel
 };

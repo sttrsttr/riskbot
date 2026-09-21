@@ -38,6 +38,7 @@ const {
 	pingparticipants,
 	updateEventChannelIds,
 	updateSignupStatus,
+	sendSignupMessage,
 	eventmanagerunarchivecommandthreads,
 	redirectCommandsMessage,
 	getAllowedChannelIds,
@@ -46,6 +47,9 @@ const {
 } = require('./modules/signuphandler.js');
 
 const { checkNewButNotSignedUp } = require('./modules/memberhandler.js');
+const { createEventRoles, createEventChannel, getUserRoles } = require('./modules/eventCreation.js');
+const { trackMessage, refreshActivityWatchlist } = require('./modules/activityTracker.js');
+const { checkLiveStreams } = require('./modules/streamWatcher.js');
 const { refreshtournamentcalendar } = require('./modules/eventsCalendar.js');
 const { removeLoungeMember } = require('./modules/lounge_functions.js');
 
@@ -119,6 +123,9 @@ client.once(Events.ClientReady, () => {
 	eventmanagerunarchivecommandthreads(client);
 	eventmanagerUnscheduledPing(client);
 
+	refreshActivityWatchlist();
+	checkLiveStreams();
+
 	//checkNewButNotSignedUp(client, global.config.guilds.MAIN);
 
 	// Console log the current node and discord.js version
@@ -138,6 +145,12 @@ cron.schedule("0 */5 * * * *", function () {
 	eventmanagegroupstartingnow(client);
 	eventmanagerlockthreads(client);
 	eventmanagerwelcomethreads(client);
+});
+
+// Create a Discord event in MAIN when a game starts while one of its players is live on Twitch.
+// Runs at :02, :07, ... so it lands after the website's 5-minute Twitch check.
+cron.schedule("0 2-59/5 * * * *", function () {
+	checkLiveStreams();
 });
 
 // Keep each active event's #commands / signup thread unarchived (surfaced) every 6 hours
@@ -237,6 +250,10 @@ client.on(Events.InteractionCreate, async interaction => {
 // Listen for messages
 client.on('messageCreate', async (message) => {
 	if (!message.author.bot && !message.system) {
+		// Count the message for the website activity statistics before any of the
+		// feature handling below, which is an if/else chain and would skip it.
+		trackMessage(message);
+
 		const contentorig = message.content.trim();
 		const content = contentorig.toLowerCase();
 		if (allowedChannelIds.includes(message.channel.id)) {
@@ -598,11 +615,13 @@ app.post('/api/createthread', async (req, res) => {
 
 });
 
-// API Endpoint for messaging
+// API Endpoint for messaging a thread
+// Optional body fields: ping (default true) - mention the users, embed (default true) - wrap
+// the message in an embed instead of plain text, title - custom title for the embed
 app.post('/api/messagethread', async (req, res) => {
 	try {
 		let post = req.body;
-		let output = await message_thread(client, post.server, post.channel, post.thread, post.message, post.users);
+		let output = await message_thread(client, post.server, post.channel, post.thread, post.message, post.users, { ping: post.ping, embed: post.embed, title: post.title });
 		res.header("Content-Type", 'application/json');
 		res.send(JSON.stringify(output, null, 4));
 	} catch (error) {
@@ -660,6 +679,65 @@ app.post('/api/swapusers', async (req, res) => {
 
 })
 
+// Helper for the event API endpoints: returns the names of required fields missing from the body
+function missingParams(body, required) {
+	return required.filter(name => body[name] === undefined || body[name] === '');
+}
+
+// API Endpoint for creating the standard event roles (staff, participant, waitlist, noshow)
+app.post('/api/createeventroles', async (req, res) => {
+	try {
+		let post = req.body;
+		const missing = missingParams(post, ['serverid', 'eventid']);
+		if (missing.length > 0) {
+			console.error('createeventroles missing parameters:', missing, '- received keys:', Object.keys(post));
+			return res.status(400).send({ error: "Missing required parameters: " + missing.join(', '), received: Object.keys(post) });
+		}
+		let output = await createEventRoles(client, post.serverid, post.eventid, post.ownerid);
+		res.header("Content-Type", 'application/json');
+		res.send(JSON.stringify(output, null, 4));
+	} catch (error) {
+		console.error('Error in event role creation:', error);
+		res.status(500).send({ error: "An error occurred during event role creation" });
+	}
+});
+
+// API Endpoint for creating the event channel with its public threads, staff thread and signup/welcome messages
+app.post('/api/createeventchannel', async (req, res) => {
+	try {
+		let post = req.body;
+		const missing = missingParams(post, ['serverid', 'eventid', 'eventname', 'staffroleid']);
+		if (missing.length > 0) {
+			console.error('createeventchannel missing parameters:', missing, '- received keys:', Object.keys(post));
+			return res.status(400).send({ error: "Missing required parameters: " + missing.join(', '), received: Object.keys(post) });
+		}
+		let output = await createEventChannel(client, post.serverid, post.eventid, post.eventname, post.ownerid, post.staffroleid, post.categoryid);
+		res.header("Content-Type", 'application/json');
+		res.send(JSON.stringify(output, null, 4));
+	} catch (error) {
+		console.error('Error in event channel creation:', error);
+		res.status(500).send({ error: "An error occurred during event channel creation" });
+	}
+});
+
+// API Endpoint for checking which roles a specific user has
+app.post('/api/getuserroles', async (req, res) => {
+	try {
+		let post = req.body;
+		const missing = missingParams(post, ['serverid', 'userid']);
+		if (missing.length > 0) {
+			console.error('getuserroles missing parameters:', missing, '- received keys:', Object.keys(post));
+			return res.status(400).send({ error: "Missing required parameters: " + missing.join(', '), received: Object.keys(post) });
+		}
+		let output = await getUserRoles(client, post.serverid, post.userid);
+		res.header("Content-Type", 'application/json');
+		res.send(JSON.stringify(output, null, 4));
+	} catch (error) {
+		console.error('Error in fetching user roles:', error);
+		res.status(500).send({ error: "An error occurred during fetching user roles" });
+	}
+});
+
 // API Endpoint for updating the signup status of an event
 app.post('/api/updatesignupstatus', async (req, res) => {
 	try {
@@ -672,6 +750,26 @@ app.post('/api/updatesignupstatus', async (req, res) => {
 		res.status(500).send({ error: "An error occurred during signup status update" });
 	}
 })
+
+// API Endpoint for posting a fresh commands/self-service message (signup buttons) into the
+// event's signup thread - used by the website after the signup channel id was repointed.
+// Returns { signupmessageid } which the website stores on the event.
+app.post('/api/sendsignupmessage', async (req, res) => {
+	try {
+		let post = req.body;
+		const missing = missingParams(post, ['eventid']);
+		if (missing.length > 0) {
+			console.error('sendsignupmessage missing parameters:', missing, '- received keys:', Object.keys(post));
+			return res.status(400).send({ error: "Missing required parameters: " + missing.join(', '), received: Object.keys(post) });
+		}
+		let output = await sendSignupMessage(client, post.eventid);
+		res.header("Content-Type", 'application/json');
+		res.send(JSON.stringify(output, null, 4));
+	} catch (error) {
+		console.error('Error in sending signup message:', error);
+		res.status(500).send({ error: "An error occurred while sending the signup message" });
+	}
+});
 
 app.listen(port, () => {
 	console.log(`Riskbot API listening on port localhost:${port}`)
