@@ -18,6 +18,9 @@ const KARMA_STARTING_SCORE = 100;
 const KARMA_SIGNUP_MINIMUM = 50;
 const KARMA_MIN_PARTICIPANTS = 100;
 
+// How long players are told to hold before groups with no-shows are reorganized.
+const REORGANIZE_DELAY_MS = 15000;
+
 // Function to get a random welcome message
 function getRandomWelcomeMessage() {
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
@@ -1849,6 +1852,248 @@ async function updatecheckinmessage(thread) {
 
 
 
+// Players currently in a group
+async function getGroupPlayers(con, groupid) {
+
+    const sql = "SELECT `playerid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + groupid + " AND `validto` IS NULL ORDER BY `playerid` ASC";
+    return await new Promise((resolve, reject) => {
+        con.query(sql, (err, result) => {
+            if (err) return reject(err);
+            resolve(result);
+        });
+    });
+}
+
+
+// Buttons posted with the message telling a group to start their game
+function groupStartComponents() {
+
+    const btn1 = new ButtonBuilder()
+        .setCustomId('pinghelp')
+        .setLabel('Ping event staff')
+        .setStyle(ButtonStyle.Danger);
+
+    const btn2 = new ButtonBuilder()
+        .setCustomId('reportscores')
+        .setLabel('Report scores')
+        .setStyle(ButtonStyle.Primary);
+
+    return [new ActionRowBuilder().addComponents(btn1).addComponents(btn2)];
+}
+
+
+// FFA ELO score from Friends of Risk. Players without a score, or whose lookup
+// fails, are treated as 0 so they are ranked last.
+async function getEloScore(userid) {
+
+    try {
+        const options = {
+            hostname: 'friendsofrisk.com',
+            path: '/m2mapi/getuser',
+            method: 'POST',
+            headers: {
+                'X-API-KEY': global.config.for_api_key
+            }
+        };
+
+        const response = JSON.parse(await httpsPostRequest(options, JSON.stringify({ discordid: userid })));
+
+        // API returns "data": [] for unknown users
+        if (response.status !== 'success' || !response.data || Array.isArray(response.data)) {
+            return 0;
+        }
+
+        return parseFloat(response.data.ffa_elo_score) || 0;
+    } catch (error) {
+        console.error(`getEloScore failed for ${userid}:`, error);
+        return 0;
+    }
+}
+
+
+// Send lines to a channel, split over several messages to stay below Discords 2000 character
+// limit. Each message only allows the user mentions it contains, as Discord caps that list at 100.
+async function sendLinesInChunks(channel, lines) {
+
+    const send = async content => {
+        const userIds = [...new Set([...content.matchAll(/<@(\d+)>/g)].map(match => match[1]))];
+        await channel.send({ content: content, allowedMentions: { users: userIds, repliedUser: false } });
+    };
+
+    let content = '';
+    for (const line of lines) {
+        if (content.length + line.length + 1 > 1900 && content.length > 0) {
+            await send(content);
+            content = '';
+        }
+        content = content + line + '\n';
+    }
+    if (content.length > 0) {
+        await send(content);
+    }
+}
+
+
+// Several groups in the same round, starting at the same time, have open spots after
+// check-in. Pool their remaining players, rank them by karma and then ELO, and fill the
+// groups from the top so the lowest ranked players end up in the last group, which is
+// the only one that may still have open spots for the waitlist/noshow list.
+async function reorganizeGroups(client, con, groups) {
+
+    try {
+
+        groups.sort((a, b) => a.id - b.id);
+
+        const first = groups[0];
+        const guild = await client.guilds.resolve(first.serverid);
+        const groupmaxsize = first.groupmaxsize;
+        const groupminsize = first.groupminsize;
+
+        // Tell everyone what is about to happen, then give them a moment before moving them
+        for (const group of groups) {
+            const playerIds = group.players.map(player => player.playerid);
+            let message = `# Please hold\nA lot of players did not check in, so I am going to reorganize ${groups.length} groups right now to fill up as many groups as possible. Please hold, you will be told which group to play in shortly.\n\n`;
+            for (const playerid of playerIds) {
+                message = message + `<@${playerid}> `;
+            }
+            await group.thread.send({ content: message, allowedMentions: { users: playerIds, repliedUser: false } })
+                .catch(err => console.error(`Could not post reorganize notice in thread ${group.threadid}: ${err.message}`));
+        }
+
+        await new Promise(resolve => setTimeout(resolve, REORGANIZE_DELAY_MS));
+
+        // Fetch the players again since somebody may have left while we were waiting
+        const groupIds = groups.map(group => group.id);
+        let sql = "SELECT `playerid`, `groupid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` IN (" + groupIds.join(',') + ") AND `validto` IS NULL";
+        const players = await new Promise((resolve, reject) => {
+            con.query(sql, (err, result) => {
+                if (err) return reject(err);
+                resolve(result);
+            });
+        });
+
+        await Promise.all(players.map(async player => {
+            player.karma = await getKarmaScore(con, player.playerid);
+            player.elo = await getEloScore(player.playerid);
+        }));
+
+        players.sort((a, b) => (b.karma - a.karma) || (b.elo - a.elo));
+
+        // Fill the groups from the top, groupmaxsize players at a time
+        for (const group of groups) {
+            group.newPlayers = [];
+        }
+        players.forEach((player, index) => {
+            const group = groups[Math.floor(index / groupmaxsize)];
+            group.newPlayers.push(player);
+            player.moved = player.groupid != group.id;
+            player.oldGroup = groups.find(g => g.id == player.groupid);
+        });
+
+        // Move players in the database. Players staying in their group keep their row.
+        for (const group of groups) {
+            for (const player of group.newPlayers.filter(p => p.moved)) {
+
+                sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__groupmembers` (`roundid`, `groupid`, `playerid`, `validfrom`, `validto`, `checkedin`, `stepin`) SELECT `roundid`, " + group.id + ", `playerid`, NOW(), NULL, `checkedin`, `stepin` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + player.groupid + " AND `playerid` = " + player.playerid + " AND `validto` IS NULL";
+                await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
+
+                sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groupmembers` SET `validto` = NOW() WHERE `groupid` = " + player.groupid + " AND `playerid` = " + player.playerid + " AND `validto` IS NULL";
+                await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
+
+                sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + player.playerid + "," + group.eventid + ",NOW(),'Moved by group reorganization'," + con.escape(`Moved from ${player.oldGroup.name} to ${group.name}`) + ",NULL,NULL)";
+                await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
+            }
+        }
+
+        // Move players between the threads
+        for (const group of groups) {
+            for (const player of group.newPlayers.filter(p => p.moved)) {
+
+                const member = await fetchMemberOrNull(guild, player.playerid).catch(err => {
+                    console.error(`Could not fetch member ${player.playerid}: ${err.message}`);
+                    return null;
+                });
+                if (!member) {
+                    continue;
+                }
+
+                await group.thread.members.add(member.id)
+                    .catch(err => console.error(`Could not add ${member.id} to thread ${group.threadid}: ${err.message}`));
+
+                if (!member.roles.cache.has(group.staffrole)) {
+                    await player.oldGroup.thread.members.remove(member.id)
+                        .catch(err => console.error(`Could not remove ${member.id} from thread ${player.oldGroup.threadid}: ${err.message}`));
+                }
+            }
+        }
+
+        // Tell each group who they are playing with
+        const lastGroup = groups.filter(group => group.newPlayers.length > 0).pop();
+        for (const group of groups) {
+
+            await updatecheckinmessage(group.thread);
+
+            const playerIds = group.newPlayers.map(player => player.playerid);
+
+            if (playerIds.length == 0) {
+                await group.thread.send({ content: `All players from this group have been moved to other groups. Please check the other group threads.` })
+                    .catch(err => console.error(`Could not post reorganize result in thread ${group.threadid}: ${err.message}`));
+                continue;
+            }
+
+            let message = `# Groups have been reorganized\nThese are the players in ${group.name}:\n`;
+            for (const player of group.newPlayers) {
+                message = message + `<@${player.playerid}>` + (player.moved ? ` (new in this group)` : ``) + `\n`;
+            }
+
+            const free_spots = groupmaxsize - playerIds.length;
+            if (free_spots > 0) {
+                message = message + `\nThis group has ${free_spots} open spot${free_spots == 1 ? '' : 's'}. I am pinging the waitlist/noshow list now. Please wait to see if somebody else joins before you start the game.`;
+                if (playerIds.length < groupminsize) {
+                    message = message + ` You need at least ${groupminsize} players to start.`;
+                }
+            } else {
+                message = message + `\nYou can start the game with these players now. Good luck!`;
+            }
+
+            await group.thread.send({ content: message, components: groupStartComponents(), allowedMentions: { users: playerIds, repliedUser: false } })
+                .catch(err => console.error(`Could not post reorganize result in thread ${group.threadid}: ${err.message}`));
+        }
+
+        // Summary for staff and players in the event help channel
+        const helpchannel = await guild.channels.fetch(first.helpchannel);
+        const timestamp = getDiscordTimestamp(first.gametime);
+        const lines = [`# Groups reorganized\nA lot of players did not check in for the groups starting <t:${timestamp}:t>, so the remaining ${players.length} players from ${groups.length} groups have been reorganized by karma and ELO.\n`];
+        for (const group of groups) {
+            if (group.newPlayers.length == 0) {
+                lines.push(`**${group.name}**: no players left`);
+                continue;
+            }
+            const mentions = group.newPlayers.map(player => `<@${player.playerid}>` + (player.moved ? ` (from ${player.oldGroup.name})` : ``));
+            lines.push(`**${group.name}** (${group.newPlayers.length}/${groupmaxsize}): ${mentions.join(', ')}`);
+        }
+
+        const last_free_spots = lastGroup ? groupmaxsize - lastGroup.newPlayers.length : 0;
+        if (last_free_spots > 0) {
+            let line = `\nThe lowest ranked players are left in **${lastGroup.name}** with ${last_free_spots} open spot${last_free_spots == 1 ? '' : 's'}.`;
+            if (lastGroup.newPlayers.length < groupminsize) {
+                line = line + ` This is below the minimum group size of ${groupminsize}.`;
+            }
+            lines.push(line);
+        }
+
+        await sendLinesInChunks(helpchannel, lines);
+
+        if (last_free_spots > 0) {
+            await pingwaitlist(client, lastGroup.thread);
+        }
+
+    } catch (error) {
+        console.error("Error reorganizing groups:", error);
+    }
+}
+
+
 async function eventmanagerCheckinStop(client) {
 
     try {
@@ -1874,7 +2119,7 @@ async function eventmanagerCheckinStop(client) {
             });
         });
 
-        let sql = "SELECT br.`noshowrole`, e.`serverid`, eg.`name`, eg.`gametime`, eg.`id`, eg.`threadid`, r.`groupmaxsize`, r.`eventid`, e.`waitlistrole`, e.`participantrole` FROM `" + global.config.mysql_database + "`.`eventmanager__groups` eg INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__events` e ON r.`eventid` = e.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__brackets` br ON br.`eventid` = e.`id` AND br.`bracketid` = r.`bracket` AND e.`checkinsystem` = 1 AND eg.`completed` IS NULL AND eg.`checkinmessageid` IS NOT NULL AND eg.`checkindone` IS NULL AND eg.`gametime` BETWEEN DATE_ADD(NOW(), INTERVAL -1 MINUTE) AND DATE_ADD(NOW(), INTERVAL 1 MINUTE)";
+        let sql = "SELECT br.`noshowrole`, e.`serverid`, e.`helpchannel`, e.`staffrole`, eg.`name`, eg.`gametime`, eg.`id`, eg.`threadid`, eg.`roundid`, r.`groupmaxsize`, r.`groupminsize`, r.`eventid`, e.`waitlistrole`, e.`participantrole` FROM `" + global.config.mysql_database + "`.`eventmanager__groups` eg INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__events` e ON r.`eventid` = e.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__brackets` br ON br.`eventid` = e.`id` AND br.`bracketid` = r.`bracket` AND e.`checkinsystem` = 1 AND eg.`completed` IS NULL AND eg.`checkinmessageid` IS NOT NULL AND eg.`checkindone` IS NULL AND eg.`gametime` BETWEEN DATE_ADD(NOW(), INTERVAL -1 MINUTE) AND DATE_ADD(NOW(), INTERVAL 1 MINUTE)";
         const result = await new Promise((resolve, reject) => {
             con.query(sql, (err, result) => {
                 if (err) return reject(err);
@@ -1927,58 +2172,57 @@ async function eventmanagerCheckinStop(client) {
             sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `checkindone` = NOW() WHERE `id` = " + group.id + "";
             await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
 
-            sql = "SELECT `playerid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + group.id + " AND `validto` IS NULL";
-            const players_left = await new Promise((resolve, reject) => {
-                con.query(sql, (err, result) => {
-                    if (err) return reject(err);
-                    resolve(result);
-                });
-            });
-
-            const free_spots = group.groupmaxsize - players_left.length;
-
-            sql = "SELECT `playerid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + group.id + " AND `validto` IS NULL ORDER BY `playerid` ASC";
-            const players = await new Promise((resolve, reject) => {
-                con.query(sql, (err, result) => {
-                    if (err) return reject(err);
-                    resolve(result);
-                });
-            });
-            const date = new Date(group.gametime);
-            let message = ``;
-
-            if (free_spots > 0) {
-                await pingwaitlist(client, thread);
-                message = message + `I have just pinged the waitlist/noshow list. Please wait to see if somebody else joins before you start the game.`;
-            } else {
-                message = message + `The game should be starting now.`;
-            }
-
-            for (const player of players) {
-                message = message + `<@${player.playerid}> `;
-            }
-
-            const playerIds = players.map(player => player.playerid);
-
-            const btn1 = new ButtonBuilder()
-                .setCustomId('pinghelp')
-                .setLabel('Ping event staff')
-                .setStyle(ButtonStyle.Danger);
-
-            const btn2 = new ButtonBuilder()
-                .setCustomId('reportscores')
-                .setLabel('Report scores')
-                .setStyle(ButtonStyle.Primary);
-
-            let components = [];
-            let row;
-
-            row = new ActionRowBuilder().addComponents(btn1).addComponents(btn2);
-            components.push(row);
-
-            const messageid = await thread.send({ content: message, components: components, allowedMentions: { users: playerIds, repliedUser: false } });
+            group.thread = thread;
+            group.players = await getGroupPlayers(con, group.id);
 
         }
+
+        // Groups in the same round starting at the same time are handled together. If more
+        // than one of them has open spots after the no-shows were removed, those groups are
+        // reorganized into as few groups as possible. Full groups are left alone.
+        const batches = new Map();
+        for (const group of result) {
+            const key = group.roundid + '_' + new Date(group.gametime).getTime();
+            if (!batches.has(key)) {
+                batches.set(key, []);
+            }
+            batches.get(key).push(group);
+        }
+
+        const reorganizations = [];
+        for (const batch of batches.values()) {
+
+            const groups_with_free_spots = batch.filter(group => group.players.length < group.groupmaxsize);
+
+            for (const group of batch) {
+                if (groups_with_free_spots.length > 1 && groups_with_free_spots.includes(group)) {
+                    continue;
+                }
+
+                let message = ``;
+                if (group.players.length < group.groupmaxsize) {
+                    await pingwaitlist(client, group.thread);
+                    message = message + `I have just pinged the waitlist/noshow list. Please wait to see if somebody else joins before you start the game.`;
+                } else {
+                    message = message + `The game should be starting now.`;
+                }
+
+                for (const player of group.players) {
+                    message = message + `<@${player.playerid}> `;
+                }
+
+                const playerIds = group.players.map(player => player.playerid);
+
+                const messageid = await group.thread.send({ content: message, components: groupStartComponents(), allowedMentions: { users: playerIds, repliedUser: false } });
+            }
+
+            if (groups_with_free_spots.length > 1) {
+                reorganizations.push(groups_with_free_spots);
+            }
+        }
+
+        // Each reorganization holds for REORGANIZE_DELAY_MS, so run them side by side
+        await Promise.all(reorganizations.map(groups => reorganizeGroups(client, con, groups)));
 
         // Close MySQL connection
         await new Promise((resolve, reject) => {

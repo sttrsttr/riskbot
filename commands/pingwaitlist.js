@@ -83,13 +83,18 @@ async execute(interaction, client) {
                             if (group) {                
                                 const noshowrole = await guild.roles.fetch(group.noshowrole);
                                 mention = `<@&${waitlistrole.id}>, <@&${noshowrole.id}>`
-                                mentionroles = [waitlistrole.id, noshowrole.id];                                
+                                mentionroles = [waitlistrole.id, noshowrole.id];
+                            } else {
+                                await interaction.followUp({ content: "ERROR: Could not find an active group for this thread, or the waitlist was already pinged less than 10 minutes ago", flags: 64 });
+                                return;
                             }
 
-                        } else if (brackets.length < 2) {
-                            const noshowrole = await guild.roles.fetch(brackets[0].noshowrole);
+                        } else if (brackets.length > 0) {
+                            // Use the noshow role of the lowest bracket (highest bracket number)
+                            const lowestbracket = brackets.reduce((a, b) => (Number(b.bracketid) > Number(a.bracketid) ? b : a));
+                            const noshowrole = await guild.roles.fetch(lowestbracket.noshowrole);
                             mention = `<@&${waitlistrole.id}>, <@&${noshowrole.id}>`
-                            mentionroles = [waitlistrole.id, noshowrole.id];                                
+                            mentionroles = [waitlistrole.id, noshowrole.id];
 
                         } else {
                             mention = `<@&${waitlistrole.id}>`;
