@@ -22,7 +22,7 @@ module.exports = async (interaction) => {
 				if (err) throw err;
 			});
 
-			let sql = "SELECT e.`serverid`, e.`helpchannel`, e.`waitlistrole`, eg.`name`, eg.`gametime`, eg.`id`, e.`staffchannel`, e.`staffrole`, eg.`checkinmessageid` FROM `" + global.config.mysql_database + "`.`eventmanager__groups` eg INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__events` e ON r.`eventid` = e.`id` AND eg.`threadid` = '" + channelid + "' INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__groupmembers` gm ON gm.`groupid` = eg.`id` AND gm.`playerid` = " + userid + " AND gm.`validto` IS NULL AND eg.`threadid` = " + channelid + " AND gm.`checkedin` IS NULL AND eg.`completed` IS NULL AND eg.`checkinmessageid` IS NOT NULL";
+			let sql = "SELECT e.`serverid`, e.`helpchannel`, e.`waitlistrole`, eg.`name`, eg.`gametime`, eg.`id`, e.`staffchannel`, e.`staffrole`, eg.`checkinmessageid`, gm.`checkedin` FROM `" + global.config.mysql_database + "`.`eventmanager__groups` eg INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__events` e ON r.`eventid` = e.`id` AND eg.`threadid` = '" + channelid + "' INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__groupmembers` gm ON gm.`groupid` = eg.`id` AND gm.`playerid` = " + userid + " AND gm.`validto` IS NULL AND eg.`threadid` = " + channelid + " AND eg.`completed` IS NULL AND eg.`checkinmessageid` IS NOT NULL";
 			const result = await new Promise((resolve, reject) => {
 				con.query(sql, function (err, result) {
 					if (err) reject(err);
@@ -30,7 +30,10 @@ module.exports = async (interaction) => {
 				});
 			});
 			const group = result[0];
-			if (group) {
+			if (group && group.checkedin) {
+				// Players who joined after check-in started are checked in automatically
+				await interaction.reply({ content: "You are already checked in ✅", flags: 64 });
+			} else if (group) {
 
 				const guild = await client.guilds.resolve(group.serverid);
 				const thread = await guild.channels.fetch(channelid);

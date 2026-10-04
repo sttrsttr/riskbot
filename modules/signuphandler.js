@@ -20,6 +20,8 @@ const KARMA_MIN_PARTICIPANTS = 100;
 
 // How long players are told to hold before groups with no-shows are reorganized.
 const REORGANIZE_DELAY_MS = 15000;
+// ELO lookups run during that hold, so give up on them before it ends.
+const ELO_LOOKUP_TIMEOUT_MS = 10000;
 
 // Function to get a random welcome message
 function getRandomWelcomeMessage() {
@@ -1775,6 +1777,55 @@ async function eventmanagegroupstartingnow(client) {
 
 
 
+// Players who join a group after its check-in started count as checked in, however they were
+// added (waitlist, swap, staff on the website, reorganization). The check-in start is when the
+// check-in message was posted, read from its snowflake id. Groups that started more than a day
+// ago are left alone so old data is not rewritten. Pass a groupid to only handle that group.
+async function checkInLateJoiners(con, groupid = null) {
+
+    let sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groupmembers` gm INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__groups` eg ON gm.`groupid` = eg.`id` SET gm.`checkedin` = gm.`validfrom` WHERE gm.`validto` IS NULL AND gm.`checkedin` IS NULL AND eg.`completed` IS NULL AND eg.`checkinmessageid` IS NOT NULL AND eg.`gametime` > DATE_ADD(NOW(), INTERVAL -1 DAY) AND gm.`validfrom` >= FROM_UNIXTIME(((eg.`checkinmessageid` >> 22) + 1420070400000) DIV 1000)";
+    if (groupid) {
+        sql = sql + " AND eg.`id` = " + groupid;
+    }
+    await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
+}
+
+
+// Runs from the cron, so players added after the game started (e.g. a replacement added by
+// staff on the website) are checked in too, not only when a check-in message is refreshed.
+async function eventmanagerCheckinLateJoiners() {
+
+    try {
+
+        const con = mysql.createConnection({
+            host: global.config.mysql_host,
+            user: global.config.mysql_username,
+            password: global.config.mysql_password,
+            supportBigNumbers: true,
+            bigNumberStrings: true
+        });
+
+        await new Promise((resolve, reject) => {
+            con.connect(err => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+
+        await checkInLateJoiners(con);
+
+        await new Promise((resolve, reject) => {
+            con.end(err => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
 
 async function updatecheckinmessage(thread) {
 
@@ -1803,6 +1854,7 @@ async function updatecheckinmessage(thread) {
         if (group) {
 
             const messagetoedit = await thread.messages.fetch(group.checkinmessageid);
+            await checkInLateJoiners(con, group.id);
             sql = "SELECT `playerid`, `checkedin` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + group.id + " AND `validto` IS NULL ORDER BY `playerid` ASC";
             const players = await new Promise((resolve, reject) => {
                 con.query(sql, (err, result) => {
@@ -1855,7 +1907,7 @@ async function updatecheckinmessage(thread) {
 // Players currently in a group
 async function getGroupPlayers(con, groupid) {
 
-    const sql = "SELECT `playerid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + groupid + " AND `validto` IS NULL ORDER BY `playerid` ASC";
+    const sql = "SELECT `playerid`, `checkedin` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + groupid + " AND `validto` IS NULL ORDER BY `playerid` ASC";
     return await new Promise((resolve, reject) => {
         con.query(sql, (err, result) => {
             if (err) return reject(err);
@@ -1883,9 +1935,10 @@ function groupStartComponents() {
 
 
 // FFA ELO score from Friends of Risk. Players without a score, or whose lookup
-// fails, are treated as 0 so they are ranked last.
+// fails or times out, are treated as 0 so they are ranked last.
 async function getEloScore(userid) {
 
+    let timer;
     try {
         const options = {
             hostname: 'friendsofrisk.com',
@@ -1896,7 +1949,11 @@ async function getEloScore(userid) {
             }
         };
 
-        const response = JSON.parse(await httpsPostRequest(options, JSON.stringify({ discordid: userid })));
+        // httpsPostRequest has no timeout, and players are holding while we wait for this
+        const timeout = new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`timed out after ${ELO_LOOKUP_TIMEOUT_MS} ms`)), ELO_LOOKUP_TIMEOUT_MS);
+        });
+        const response = JSON.parse(await Promise.race([httpsPostRequest(options, JSON.stringify({ discordid: userid })), timeout]));
 
         // API returns "data": [] for unknown users
         if (response.status !== 'success' || !response.data || Array.isArray(response.data)) {
@@ -1907,6 +1964,8 @@ async function getEloScore(userid) {
     } catch (error) {
         console.error(`getEloScore failed for ${userid}:`, error);
         return 0;
+    } finally {
+        clearTimeout(timer);
     }
 }
 
@@ -1935,9 +1994,11 @@ async function sendLinesInChunks(channel, lines) {
 
 
 // Several groups in the same round, starting at the same time, have open spots after
-// check-in. Pool their remaining players, rank them by karma and then ELO, and fill the
-// groups from the top so the lowest ranked players end up in the last group, which is
-// the only one that may still have open spots for the waitlist/noshow list.
+// check-in. Pool the remaining players of every group in that batch that did not have all
+// groupmaxsize players checked in, rank them by karma and then ELO, and fill the groups
+// from the top so the lowest ranked players end up in the last group, which is the only
+// one that may still have open spots for the waitlist/noshow list. Groups where everybody
+// checked in are never passed in here, so they are left alone.
 async function reorganizeGroups(client, con, groups) {
 
     try {
@@ -1960,9 +2021,22 @@ async function reorganizeGroups(client, con, groups) {
                 .catch(err => console.error(`Could not post reorganize notice in thread ${group.threadid}: ${err.message}`));
         }
 
-        await new Promise(resolve => setTimeout(resolve, REORGANIZE_DELAY_MS));
+        // Look up karma and ELO while the players are holding, so the ranking is ready when the
+        // hold ends and the players fetched below are moved straight away
+        const scores = new Map();
+        const getScores = playerid => {
+            if (!scores.has(playerid)) {
+                scores.set(playerid, Promise.all([getKarmaScore(con, playerid), getEloScore(playerid)]));
+            }
+            return scores.get(playerid);
+        };
 
-        // Fetch the players again since somebody may have left while we were waiting
+        await Promise.all([
+            new Promise(resolve => setTimeout(resolve, REORGANIZE_DELAY_MS)),
+            ...groups.flatMap(group => group.players.map(player => getScores(player.playerid)))
+        ]);
+
+        // Fetch the players again since somebody may have left or joined while we were waiting
         const groupIds = groups.map(group => group.id);
         let sql = "SELECT `playerid`, `groupid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` IN (" + groupIds.join(',') + ") AND `validto` IS NULL";
         const players = await new Promise((resolve, reject) => {
@@ -1972,9 +2046,9 @@ async function reorganizeGroups(client, con, groups) {
             });
         });
 
+        // Only players who joined during the hold still need a lookup here
         await Promise.all(players.map(async player => {
-            player.karma = await getKarmaScore(con, player.playerid);
-            player.elo = await getEloScore(player.playerid);
+            [player.karma, player.elo] = await getScores(player.playerid);
         }));
 
         players.sort((a, b) => (b.karma - a.karma) || (b.elo - a.elo));
@@ -2003,6 +2077,14 @@ async function reorganizeGroups(client, con, groups) {
                 sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + player.playerid + "," + group.eventid + ",NOW(),'Moved by group reorganization'," + con.escape(`Moved from ${player.oldGroup.name} to ${group.name}`) + ",NULL,NULL)";
                 await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
             }
+        }
+
+        // A group may still have a waitlist ping from before the start. Close it for groups that
+        // were emptied, as the join button only checks that the group is not full.
+        const emptiedGroupIds = groups.filter(group => group.newPlayers.length == 0).map(group => group.id);
+        if (emptiedGroupIds.length > 0) {
+            sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `pingmessageid` = NULL WHERE `id` IN (" + emptiedGroupIds.join(',') + ")";
+            await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
         }
 
         // Move players between the threads
@@ -2127,12 +2209,27 @@ async function eventmanagerCheckinStop(client) {
             });
         });
 
-        // Process the result
+        // Claim the groups before doing anything else, so an overlapping run (the startup call
+        // landing next to a cron tick) cannot remove no-shows or reorganize the same groups twice
+        const claimed = [];
         for (const group of result) {
+            sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `checkindone` = NOW() WHERE `id` = " + group.id + " AND `checkindone` IS NULL";
+            const claim = await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
+            if (claim.affectedRows == 1) {
+                claimed.push(group);
+            }
+        }
+
+        // Process the result
+        for (const group of claimed) {
 
             const guild = await client.guilds.resolve(group.serverid);
             const thread = await guild.channels.fetch(group.threadid);
             const noshowrole = await guild.roles.fetch(group.noshowrole);
+
+            // Players who joined during check-in are not no-shows, and count as checked in when
+            // deciding which groups take part in a reorganization below
+            await checkInLateJoiners(con, group.id);
 
             sql = "SELECT `playerid` FROM `" + global.config.mysql_database + "`.`eventmanager__groupmembers` WHERE `groupid` = " + group.id + " AND `validto` IS NULL AND `validfrom` < DATE_ADD(NOW(), INTERVAL -45 MINUTE) AND `checkedin` IS NULL";
             const players_to_be_removed = await new Promise((resolve, reject) => {
@@ -2145,8 +2242,13 @@ async function eventmanagerCheckinStop(client) {
 
             for (const player of players_to_be_removed) {
 
-                sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groupmembers` SET `validto` = NOW() WHERE `groupid` = " + group.id + " AND `validto` IS NULL AND `playerid` = " + player.playerid + "";
-                await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
+                // The cron fires right at the start time, so a player may check in or leave while
+                // we are busy removing the ones before them. Leave those players alone.
+                sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groupmembers` SET `validto` = NOW() WHERE `groupid` = " + group.id + " AND `validto` IS NULL AND `checkedin` IS NULL AND `playerid` = " + player.playerid + "";
+                const removal = await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
+                if (removal.affectedRows == 0) {
+                    continue;
+                }
 
                 try {
                     const member = await guild.members.fetch(player.playerid);
@@ -2169,19 +2271,17 @@ async function eventmanagerCheckinStop(client) {
 
             await updatecheckinmessage(thread);
 
-            sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groups` SET `checkindone` = NOW() WHERE `id` = " + group.id + "";
-            await new Promise((resolve, reject) => { con.query(sql, (err, result) => { if (err) return reject(err); resolve(result); }); });
-
             group.thread = thread;
             group.players = await getGroupPlayers(con, group.id);
 
         }
 
         // Groups in the same round starting at the same time are handled together. If more
-        // than one of them has open spots after the no-shows were removed, those groups are
-        // reorganized into as few groups as possible. Full groups are left alone.
+        // than one of them has open spots after the no-shows were removed, every group in the
+        // batch that does not have all groupmaxsize players checked in is reorganized into as
+        // few groups as possible. Groups where everybody checked in are left alone.
         const batches = new Map();
-        for (const group of result) {
+        for (const group of claimed) {
             const key = group.roundid + '_' + new Date(group.gametime).getTime();
             if (!batches.has(key)) {
                 batches.set(key, []);
@@ -2192,10 +2292,15 @@ async function eventmanagerCheckinStop(client) {
         const reorganizations = [];
         for (const batch of batches.values()) {
 
+            // Only reorganize when it fills up groups, and judge which groups take part by the
+            // check-ins at start time. A group with open spots never has everybody checked in.
             const groups_with_free_spots = batch.filter(group => group.players.length < group.groupmaxsize);
+            const groups_to_reorganize = groups_with_free_spots.length > 1
+                ? batch.filter(group => group.players.filter(player => player.checkedin).length < group.groupmaxsize)
+                : [];
 
             for (const group of batch) {
-                if (groups_with_free_spots.length > 1 && groups_with_free_spots.includes(group)) {
+                if (groups_to_reorganize.includes(group)) {
                     continue;
                 }
 
@@ -2216,8 +2321,8 @@ async function eventmanagerCheckinStop(client) {
                 const messageid = await group.thread.send({ content: message, components: groupStartComponents(), allowedMentions: { users: playerIds, repliedUser: false } });
             }
 
-            if (groups_with_free_spots.length > 1) {
-                reorganizations.push(groups_with_free_spots);
+            if (groups_to_reorganize.length > 0) {
+                reorganizations.push(groups_to_reorganize);
             }
         }
 
@@ -2365,6 +2470,7 @@ module.exports = {
     pingparticipants,
     eventmanagerCheckinStart,
     eventmanagerCheckinStop,
+    eventmanagerCheckinLateJoiners,
     eventmanagerUnscheduledPing,
     signupHandler,
     updateSignupStatus,

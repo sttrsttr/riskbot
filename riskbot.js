@@ -32,6 +32,7 @@ const {
 	eventmanager1hourping,
 	eventmanagerCheckinStart,
 	eventmanagerCheckinStop,
+	eventmanagerCheckinLateJoiners,
 	eventmanagerUnscheduledPing,
 	availabilityMessage,
 	pingstaff,
@@ -139,6 +140,7 @@ client.once(Events.ClientReady, () => {
 cron.schedule("0 */5 * * * *", function () {
 	eventmanagerCheckinStart(client);
 	eventmanagerCheckinStop(client);
+	eventmanagerCheckinLateJoiners();
 	eventmanager1hourping(client);
 	eventmanager24hourping(client);
 	eventmanager48hourping(client);
