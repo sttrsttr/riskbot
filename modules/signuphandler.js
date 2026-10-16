@@ -2142,36 +2142,128 @@ async function reorganizeGroups(client, con, groups) {
                 .catch(err => console.error(`Could not post reorganize result in thread ${group.threadid}: ${err.message}`));
         }
 
-        // Summary for staff and players in the event help channel
+        // Summary for staff and players in the event help channel: the new groups and which
+        // groups are left empty
         const helpchannel = await guild.channels.fetch(first.helpchannel);
         const timestamp = getDiscordTimestamp(first.gametime);
-        const lines = [`# Groups reorganized\nA lot of players did not check in for the groups starting <t:${timestamp}:t>, so the remaining ${players.length} players from ${groups.length} groups have been reorganized by karma and ELO.\n`];
+        const lines = [`# Groups reorganized\nThese are the new groups starting <t:${timestamp}:t>:\n`];
+        const emptyGroupNames = [];
         for (const group of groups) {
             if (group.newPlayers.length == 0) {
-                lines.push(`**${group.name}**: no players left`);
+                emptyGroupNames.push(group.name);
                 continue;
             }
-            const mentions = group.newPlayers.map(player => `<@${player.playerid}>` + (player.moved ? ` (from ${player.oldGroup.name})` : ``));
+            const mentions = group.newPlayers.map(player => `<@${player.playerid}>`);
             lines.push(`**${group.name}** (${group.newPlayers.length}/${groupmaxsize}): ${mentions.join(', ')}`);
         }
-
-        const last_free_spots = lastGroup ? groupmaxsize - lastGroup.newPlayers.length : 0;
-        if (last_free_spots > 0) {
-            let line = `\nThe lowest ranked players are left in **${lastGroup.name}** with ${last_free_spots} open spot${last_free_spots == 1 ? '' : 's'}.`;
-            if (lastGroup.newPlayers.length < groupminsize) {
-                line = line + ` This is below the minimum group size of ${groupminsize}.`;
-            }
-            lines.push(line);
+        if (emptyGroupNames.length > 0) {
+            lines.push(`\n**Empty groups:** ${emptyGroupNames.join(', ')}`);
         }
 
         await sendLinesInChunks(helpchannel, lines);
 
+        const last_free_spots = lastGroup ? groupmaxsize - lastGroup.newPlayers.length : 0;
         if (last_free_spots > 0) {
             await pingwaitlist(client, lastGroup.thread);
         }
 
     } catch (error) {
         console.error("Error reorganizing groups:", error);
+    }
+}
+
+
+// Five minutes before game time, warn the groups that will most likely be reorganized when
+// check-in ends, so their players know to stay put instead of being surprised by the shuffle.
+// Same rule as eventmanagerCheckinStop: groups in the same round starting at the same time are
+// a batch, and when more than one of them is missing checked in players, those are reorganized.
+async function eventmanagerReorganizeWarning(client) {
+
+    try {
+
+        const con = mysql.createConnection({
+            host: global.config.mysql_host,
+            user: global.config.mysql_username,
+            password: global.config.mysql_password,
+            supportBigNumbers: true,
+            bigNumberStrings: true
+        });
+
+        await new Promise((resolve, reject) => {
+            con.connect(err => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+
+        // The cron runs every 5 minutes, so this window catches each group once
+        let sql = "SELECT e.`serverid`, eg.`name`, eg.`gametime`, eg.`id`, eg.`threadid`, eg.`roundid`, r.`groupmaxsize` FROM `" + global.config.mysql_database + "`.`eventmanager__groups` eg INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__rounds` r ON eg.`roundid` = r.`id` INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__events` e ON r.`eventid` = e.`id` AND e.`checkinsystem` = 1 AND eg.`threadid` IS NOT NULL AND eg.`completed` IS NULL AND eg.`checkinmessageid` IS NOT NULL AND eg.`checkindone` IS NULL AND eg.`gametime` BETWEEN DATE_ADD(NOW(), INTERVAL 4 MINUTE) AND DATE_ADD(NOW(), INTERVAL 6 MINUTE)";
+        const result = await new Promise((resolve, reject) => {
+            con.query(sql, (err, result) => {
+                if (err) return reject(err);
+                resolve(result);
+            });
+        });
+
+        const batches = new Map();
+        for (const group of result) {
+
+            // Players who joined during check-in count as checked in, as they do at check-in stop
+            await checkInLateJoiners(con, group.id);
+            group.players = await getGroupPlayers(con, group.id);
+
+            const key = group.roundid + '_' + new Date(group.gametime).getTime();
+            if (!batches.has(key)) {
+                batches.set(key, []);
+            }
+            batches.get(key).push(group);
+        }
+
+        for (const batch of batches.values()) {
+
+            // Groups where everybody checked in are never reorganized, so they are not warned
+            const groups_to_warn = batch.filter(group => group.players.filter(player => player.checkedin).length < group.groupmaxsize);
+            if (groups_to_warn.length < 2) {
+                continue;
+            }
+
+            // Two groups are only reorganized when they fit in one, and players who already
+            // checked in will still be there at check-in stop
+            const checkedin_to_warn = groups_to_warn.reduce((sum, group) => sum + group.players.filter(player => player.checkedin).length, 0);
+            if (groups_to_warn.length == 2 && checkedin_to_warn > groups_to_warn[0].groupmaxsize) {
+                continue;
+            }
+
+            for (const group of groups_to_warn) {
+
+                const guild = await client.guilds.resolve(group.serverid);
+                const thread = guild ? await guild.channels.fetch(group.threadid).catch(() => null) : null;
+                if (!thread) {
+                    continue;
+                }
+
+                const playerIds = group.players.map(player => player.playerid);
+                const timestamp = getDiscordTimestamp(group.gametime);
+
+                let message = `# Stay put, groups may be shuffled\nSeveral groups starting <t:${timestamp}:R> have players who have not checked in, or open spots. When check-in closes I will most likely move players between these groups to make as many full groups as possible.\n\n**Please stay in this thread and do not start the game yet.** I will post here which group you are playing in. If you are moved, you will be added to your new group's thread automatically.\n\nNot checked in yet? Click the Check in button in the check-in message above now, or you will lose your spot.\n\n`;
+                for (const playerid of playerIds) {
+                    message = message + `<@${playerid}> `;
+                }
+
+                await thread.send({ content: message, allowedMentions: { users: playerIds, repliedUser: false } })
+                    .catch(err => console.error(`Could not post reorganize warning in thread ${group.threadid}: ${err.message}`));
+            }
+        }
+
+        await new Promise((resolve, reject) => {
+            con.end(err => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+
+    } catch (error) {
+        console.error("Error:", error);
     }
 }
 
@@ -2279,7 +2371,8 @@ async function eventmanagerCheckinStop(client) {
         // Groups in the same round starting at the same time are handled together. If more
         // than one of them has open spots after the no-shows were removed, every group in the
         // batch that does not have all groupmaxsize players checked in is reorganized into as
-        // few groups as possible. Groups where everybody checked in are left alone.
+        // few groups as possible. Groups where everybody checked in are left alone, and so are
+        // two groups that would not fit into one.
         const batches = new Map();
         for (const group of claimed) {
             const key = group.roundid + '_' + new Date(group.gametime).getTime();
@@ -2295,9 +2388,16 @@ async function eventmanagerCheckinStop(client) {
             // Only reorganize when it fills up groups, and judge which groups take part by the
             // check-ins at start time. A group with open spots never has everybody checked in.
             const groups_with_free_spots = batch.filter(group => group.players.length < group.groupmaxsize);
-            const groups_to_reorganize = groups_with_free_spots.length > 1
+            let groups_to_reorganize = groups_with_free_spots.length > 1
                 ? batch.filter(group => group.players.filter(player => player.checkedin).length < group.groupmaxsize)
                 : [];
+
+            // Two groups that would still be two groups afterwards gain nothing from a
+            // reorganization, so they keep their players and each pings the waitlist
+            const players_to_reorganize = groups_to_reorganize.reduce((sum, group) => sum + group.players.length, 0);
+            if (groups_to_reorganize.length == 2 && players_to_reorganize > groups_to_reorganize[0].groupmaxsize) {
+                groups_to_reorganize = [];
+            }
 
             for (const group of batch) {
                 if (groups_to_reorganize.includes(group)) {
@@ -2471,7 +2571,10 @@ module.exports = {
     eventmanagerCheckinStart,
     eventmanagerCheckinStop,
     eventmanagerCheckinLateJoiners,
+    eventmanagerReorganizeWarning,
     eventmanagerUnscheduledPing,
+    getKarmaScore,
+    fetchMemberOrNull,
     signupHandler,
     updateSignupStatus,
     sendSignupMessage,

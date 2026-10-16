@@ -78,25 +78,38 @@ module.exports = {
                                         sql = "SELECT g.* FROM `" + global.config.mysql_database + "`.`eventmanager__groups` g INNER JOIN `" + global.config.mysql_database + "`.`eventmanager__groupmembers` gm ON gm.`groupid` = g.`id` AND g.`roundid` = '" + group.roundid + "' AND gm.`playerid` = '" + player.id + "' AND gm.`validto` IS NULL";
                                         currentgroups = await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
-                                        if (currentgroups.length == 1) {
-                                            const currentgroup = currentgroups[0];
-                                            if (currentgroup) {
-                                                sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groupmembers` SET `validto` = NOW() WHERE `validto` IS NULL AND `playerid` = " + player.id + " AND `groupid` = " + currentgroup.id + "";
-                                                await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
+                                        const currentgroup = currentgroups.length == 1 ? currentgroups[0] : null;
 
-                                                const currentthread = await guild.channels.fetch(currentgroup.threadid);
-
-                                                const welcomemsg = `<@${player.id}> just left this group`;
-                                                await currentthread.send({ content: welcomemsg, allowedMentions: { users: [player.id], repliedUser: false } });
-
-                                                if (!member.roles.cache.has(group.staffroleid)) {
-                                                    await currentthread.members.remove(`${member.id}`);
-                                                }
-                                            }
+                                        // Update the database before touching Discord, so a failing Discord call
+                                        // can't leave the player out of both groups
+                                        if (currentgroup) {
+                                            sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groupmembers` SET `validto` = NOW() WHERE `validto` IS NULL AND `playerid` = " + player.id + " AND `groupid` = " + currentgroup.id + "";
+                                            await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
                                         }
 
                                         sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__groupmembers` VALUES (NULL," + group.roundid + ", " + group.id + ", " + player.id + ", NOW(), NULL, NULL, NULL)";
                                         await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
+
+                                        // Same actions as the website's fill slot, so it shows up in the player's history
+                                        const logaction = currentgroup ? 'Swapped into an empty spot' : 'Took an empty spot from waitlist';
+                                        sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + player.id + "," + group.eventid + ",NOW(),'" + logaction + "','Addtogroup-command by staff',NULL,NULL)";
+                                        await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
+
+                                        if (currentgroup) {
+                                            const currentthread = await guild.channels.fetch(currentgroup.threadid);
+
+                                            const welcomemsg = `<@${player.id}> just left this group`;
+                                            await currentthread.send({ content: welcomemsg, allowedMentions: { users: [player.id], repliedUser: false } });
+
+                                            if (!member.roles.cache.has(group.staffroleid)) {
+                                                // Can fail with Missing Access, the player has already moved in the database
+                                                try {
+                                                    await currentthread.members.remove(`${member.id}`);
+                                                } catch (error) {
+                                                    console.error(error);
+                                                }
+                                            }
+                                        }
 
                                         thread.members.add(member);
 

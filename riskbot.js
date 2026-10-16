@@ -33,6 +33,7 @@ const {
 	eventmanagerCheckinStart,
 	eventmanagerCheckinStop,
 	eventmanagerCheckinLateJoiners,
+	eventmanagerReorganizeWarning,
 	eventmanagerUnscheduledPing,
 	availabilityMessage,
 	pingstaff,
@@ -141,6 +142,7 @@ cron.schedule("0 */5 * * * *", function () {
 	eventmanagerCheckinStart(client);
 	eventmanagerCheckinStop(client);
 	eventmanagerCheckinLateJoiners();
+	eventmanagerReorganizeWarning(client);
 	eventmanager1hourping(client);
 	eventmanager24hourping(client);
 	eventmanager48hourping(client);

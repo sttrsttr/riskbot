@@ -36,17 +36,8 @@ module.exports = async (interaction) => {
 				const thread = await guild.channels.fetch(channelid);
 				const member = await guild.members.fetch(userid);
 
-				await interaction.reply({ content: "Goodbye!", flags: 64 });
-
-				const welcomemsg = `<@${userid}> just left this group`;
-				await thread.send({ content: welcomemsg, allowedMentions: { users: [userid], repliedUser: false } });
-
-				await member.roles.add(group.noshowrole);
-
-				if (!member.roles.cache.has(group.staffroleid)) {
-					await thread.members.remove(`${member.id}`);
-				}
-
+				// Update the database before touching Discord, so a failing Discord call
+				// can't leave the player in the group after we said goodbye
 				sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__groupmembers` SET `validto` = NOW() WHERE `groupid` = " + group.id + " AND `validto` IS NULL AND `playerid` = " + interaction.user.id + "";
 				await new Promise((resolve, reject) => {
 					con.query(sql, (err, result) => {
@@ -55,12 +46,28 @@ module.exports = async (interaction) => {
 					});
 				});
 
+				sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + userid + "," + group.eventid + ",NOW(),'Left a group before start','Using Discord',NULL,NULL)";
+				await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
+
+				await interaction.reply({ content: "Goodbye!", flags: 64 });
+
+				const welcomemsg = `<@${userid}> just left this group`;
+				await thread.send({ content: welcomemsg, allowedMentions: { users: [userid], repliedUser: false } });
+
+				await member.roles.add(group.noshowrole);
+
+				if (!member.roles.cache.has(group.staffroleid)) {
+					// Can fail with Missing Access, the player has already left the group in the database
+					try {
+						await thread.members.remove(`${member.id}`);
+					} catch (error) {
+						console.error(error);
+					}
+				}
+
 				if (group.checkinmessageid) {
 					await updatecheckinmessage(thread);
 				}
-
-				sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + userid + "," + group.eventid + ",NOW(),'Left a group before start','Using Discord',NULL,NULL)";
-				await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
 			} else {
 				await interaction.reply({ content: "I am not able to put you on the waitlist, sorry!", flags: 64 });
@@ -68,7 +75,9 @@ module.exports = async (interaction) => {
 			con.end();
 		} catch (error) {
 			console.error(error);
-			await interaction.reply({ content: "Error, please try again later", flags: 64 });
+			if (!interaction.replied) {
+				await interaction.reply({ content: "Error, please try again later", flags: 64 });
+			}
 		}
 
 };
