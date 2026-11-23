@@ -95,6 +95,20 @@ module.exports = {
                                         sql = "INSERT INTO `" + global.config.mysql_database + "`.`eventmanager__playerlog` VALUES (NULL," + player.id + "," + group.eventid + ",NOW(),'" + logaction + "','Addtogroup-command by staff',NULL,NULL)";
                                         await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
 
+                                        // Take the player off the waitlist, like the waitlist button and the website's fill slot do,
+                                        // otherwise the website and /getuserinfo keep showing them as waitlisted
+                                        sql = "UPDATE `" + global.config.mysql_database + "`.`eventmanager__signups` SET `waitlist` = NULL WHERE `eventid` = " + group.eventid + " AND `playerid` = " + player.id + " AND `validto` IS NULL";
+                                        await new Promise((resolve, reject) => { con.query(sql, function (err, result) { if (err) reject(err); resolve(result); }); });
+
+                                        // Roles before the thread messages, so a failing message can't leave the player without the participant role
+                                        if (member.roles.cache.has(group.waitlistrole)) {
+                                            await member.roles.remove(group.waitlistrole);
+                                        }
+                                        if (member.roles.cache.has(group.noshowrole)) {
+                                            await member.roles.remove(group.noshowrole);
+                                        }
+                                        await member.roles.add(group.participantrole);
+
                                         if (currentgroup) {
                                             const currentthread = await guild.channels.fetch(currentgroup.threadid);
 
@@ -115,13 +129,6 @@ module.exports = {
 
                                         const welcomemsg = `<@${member.id}> just joined this group!`;
                                         await thread.send({ content: welcomemsg, allowedMentions: { users: [member.id], repliedUser: false } });
-                                        if (member.roles.cache.has(group.waitlistrole)) {
-                                            await member.roles.remove(group.waitlistrole);
-                                        }
-                                        if (member.roles.cache.has(group.noshowrole)) {
-                                            await member.roles.remove(group.noshowrole);
-                                        }
-                                        await member.roles.add(group.participantrole);
 
                                     } else {
                                         await interaction.followUp({ content: "ERROR: This player has already played this round", flags: 64 });

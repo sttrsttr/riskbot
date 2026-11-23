@@ -23,6 +23,11 @@ const REORGANIZE_DELAY_MS = 15000;
 // ELO lookups run during that hold, so give up on them before it ends.
 const ELO_LOOKUP_TIMEOUT_MS = 10000;
 
+// Event channel list refresh (see updateEventChannelIds)
+const EVENT_CHANNELS_TIMEOUT_MS = 15000;
+const EVENT_CHANNELS_RETRY_MS = 60 * 1000;
+const EVENT_CHANNELS_REFRESH_MS = 15 * 60 * 1000;
+
 // Function to get a random welcome message
 function getRandomWelcomeMessage() {
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
@@ -180,39 +185,56 @@ async function swap_users(client, tserver, tchannel, tthread_a, tuser_a, tthread
 
 }
 
+// Reload the signup/main/chat channel lists from the website. Returns false (and keeps the
+// previous lists) if the website didn't answer with a usable event list, e.g. while it or
+// MySQL is still starting after a reboot. The arrays are updated in place because riskbot.js
+// holds its own references to them.
 async function updateEventChannelIds() {
+    let timer;
     try {
 
-        // Reset the array
-        chatChannelIds = [];
-        announcementChannelsIds = [];
-        allowedChannelIds = [];
-
-        https.get('https://friendsofrisk.com/openapi/getEvents', (resp) => {
-            let data = '';
-            resp.on('data', (chunk) => {
-                data += chunk;
-            });
-            resp.on('end', () => {
-                const result = JSON.parse(data);
-                // Process the result
-                for (const event of result) {
-                    allowedChannelIds.push(event.signupchannel);
-                    announcementChannelsIds.push(event.mainchannel);
-                    chatChannelIds.push(event.textchannel);
-                    chatChannelIds.push(event.helpchannel);
-                    chatChannelIds.push(event.mainchannel);
-                }
-            });
-        }).on("error", (err) => {
-            console.error("Error fetching calendar data: " + err.message);
+        // httpsGetRequest has no timeout, and a hung request would stall the refresh loop
+        const timeout = new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`timed out after ${EVENT_CHANNELS_TIMEOUT_MS} ms`)), EVENT_CHANNELS_TIMEOUT_MS);
         });
+        const res = await Promise.race([httpsGetRequest({
+            hostname: 'friendsofrisk.com',
+            path: '/openapi/getEvents',
+            method: 'GET',
+        }), timeout]);
+        const result = JSON.parse(res);
+        if (!Array.isArray(result) || result.length === 0) {
+            throw new Error('getEvents returned no events');
+        }
 
+        const allowed = [];
+        const announcements = [];
+        const chat = [];
+        for (const event of result) {
+            allowed.push(event.signupchannel);
+            announcements.push(event.mainchannel);
+            chat.push(event.textchannel);
+            chat.push(event.helpchannel);
+            chat.push(event.mainchannel);
+        }
+        allowedChannelIds.splice(0, allowedChannelIds.length, ...allowed);
+        announcementChannelsIds.splice(0, announcementChannelsIds.length, ...announcements);
+        chatChannelIds.splice(0, chatChannelIds.length, ...chat);
+        return true;
 
     } catch (error) {
-        // Handle errors
-        console.error("Error:", error);
+        console.error("Error fetching event channel ids: " + error.message);
+        return false;
+    } finally {
+        clearTimeout(timer);
     }
+}
+
+// Keep the channel lists fresh, and retry quickly until the first load succeeds so a
+// restart during a website outage doesn't leave the bot ignoring event channels.
+async function refreshEventChannelIdsLoop() {
+    const ok = await updateEventChannelIds();
+    setTimeout(refreshEventChannelIdsLoop, ok ? EVENT_CHANNELS_REFRESH_MS : EVENT_CHANNELS_RETRY_MS);
 }
 
 
@@ -2553,7 +2575,7 @@ async function redirectCommandsMessage(message, client) {
 }
 
 
-updateEventChannelIds();
+refreshEventChannelIdsLoop();
 
 module.exports = {
     updateEventChannelIds,
